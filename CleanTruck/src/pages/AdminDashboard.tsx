@@ -134,7 +134,7 @@ const AdminDashboard = () => {
             <Recycle className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-lg font-bold">WeMS</span>
+            <span className="text-lg font-bold">CleanTruck</span>
             <p className="text-xs text-muted-foreground">Admin Portal</p>
           </div>
         </div>

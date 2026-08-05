@@ -40,7 +40,7 @@ const FeaturesSection = () => {
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Why Choose <span className="text-primary">WeMS</span>?
+            Why Choose <span className="text-primary">CleanTruck</span>?
           </h2>
           <p className="text-muted-foreground text-lg">
             Our platform bridges the gap between residents and waste collectors, 

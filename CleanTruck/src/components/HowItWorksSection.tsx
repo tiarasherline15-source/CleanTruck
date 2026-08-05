@@ -36,7 +36,7 @@ const HowItWorksSection = () => {
             How It <span className="text-primary">Works</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Getting started with WeMS is simple. Follow these easy steps to schedule your first collection.
+            Getting started with CleanTruck is simple. Follow these easy steps to schedule your first collection.
           </p>
         </div>
 

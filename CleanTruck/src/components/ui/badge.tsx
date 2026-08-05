@@ -1,25 +1,37 @@
-import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
-import HowItWorksSection from "@/components/HowItWorksSection";
-import StatsSection from "@/components/StatsSection";
-import CTASection from "@/components/CTASection";
-import Footer from "@/components/Footer";
+﻿import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
-const Index = () => {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <HeroSection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <StatsSection />
-        <CTASection />
-      </main>
-      <Footer />
-    </div>
-  );
-};
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "bg-muted text-muted-foreground border-border",
+        outline: "border border-input bg-background text-foreground",
+        primary: "bg-primary text-primary-foreground border-primary/20",
+        secondary: "bg-secondary text-secondary-foreground border-secondary/20",
+        success: "bg-success text-success-foreground border-success/20",
+        warning: "bg-warning text-warning-foreground border-warning/20",
+        destructive: "bg-destructive text-destructive-foreground border-destructive/20",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);
 
-export default Index;
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {}
+
+const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
+  ({ className, variant, ...props }, ref) => (
+    <span ref={ref} className={cn(badgeVariants({ variant, className }))} {...props} />
+  )
+);
+
+Badge.displayName = "Badge";
+
+export { Badge, badgeVariants };

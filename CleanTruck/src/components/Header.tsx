@@ -23,7 +23,7 @@ const Header = () => {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
             <Recycle className="h-6 w-6" />
           </div>
-          <span className="text-xl font-bold text-foreground">WeMS</span>
+          <span className="text-xl font-bold text-foreground">CleanTruck</span>
         </Link>
 
         {/* Desktop Navigation */}

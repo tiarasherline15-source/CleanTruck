@@ -42,15 +42,14 @@ const Dashboard = () => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Recycle className="h-5 w-5" />
           </div>
-          <span className="text-lg font-bold">WeMS</span>
+          <span className="text-lg font-bold">CleanTruck</span>
         </div>
-        
         <nav className="p-4 space-y-2">
           <button
             onClick={() => setActiveTab("overview")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "overview" 
-                ? "bg-primary text-primary-foreground" 
+              activeTab === "overview"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
@@ -60,8 +59,8 @@ const Dashboard = () => {
           <button
             onClick={() => setActiveTab("requests")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "requests" 
-                ? "bg-primary text-primary-foreground" 
+              activeTab === "requests"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
@@ -71,8 +70,8 @@ const Dashboard = () => {
           <button
             onClick={() => setActiveTab("schedule")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "schedule" 
-                ? "bg-primary text-primary-foreground" 
+              activeTab === "schedule"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
@@ -82,8 +81,8 @@ const Dashboard = () => {
           <button
             onClick={() => setActiveTab("settings")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "settings" 
-                ? "bg-primary text-primary-foreground" 
+              activeTab === "settings"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >

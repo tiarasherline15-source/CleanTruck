@@ -12,7 +12,7 @@ const Footer = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground text-foreground">
                 <Recycle className="h-6 w-6" />
               </div>
-              <span className="text-xl font-bold">WeMS</span>
+              <span className="text-xl font-bold">CleanTruck</span>
             </Link>
             <p className="text-sm text-primary-foreground/70 max-w-xs">
               Streamlining waste collection for cleaner, healthier Kenyan communities.
@@ -55,7 +55,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                info@wems.co.ke
+                info@cleantruck.co.ke
               </li>
             </ul>
           </div>

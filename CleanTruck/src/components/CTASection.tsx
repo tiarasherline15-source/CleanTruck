@@ -22,7 +22,7 @@ const CTASection = () => {
               Ready for a Cleaner Environment?
             </h2>
             <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              Join thousands of residents already using WeMS for reliable, 
+              Join thousands of residents already using CleanTruck for reliable, 
               timely waste collection. Sign up today and make a difference.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
