@@ -11,56 +11,49 @@ const HeroSection = () => {
   ];
 
   return (
-    <section className="relative min-h-[85vh] flex items-center overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroBg})` }}
       >
-        <div className="absolute inset-0 bg-gradient-hero opacity-85" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
       {/* Content */}
-      <div className="container relative z-10 py-20">
-        <div className="max-w-2xl space-y-8 animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-sm text-primary-foreground backdrop-blur-sm border border-primary-foreground/20">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-            </span>
-            Now serving Nairobi County
-          </div>
+      <div className="container relative z-10 flex items-center justify-center min-h-screen">
+        <div className="max-w-2xl w-full space-y-8 animate-fade-in-up flex flex-col items-center text-center">
+          
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight">
-            Clean Communities,{" "}
-            <span className="text-accent">Healthier Future</span>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight max-w-3xl whitespace-nowrap">
+            Smarter Waste Solutions for <br></br><span className="text-3xl sm:text-4xl text-[#0eecb4] ">Cleaner Cities</span>
           </h1>
 
-          <p className="text-lg text-primary-foreground/80 max-w-xl">
-            Schedule garbage collection with ease. Our digital platform connects residents 
-            with waste collectors for timely, reliable service across Kenya.
+          <p className="text-lg text-white max-w-2xl">
+            Schedule garbage collection with ease. Making waste collection more organized, reliable, and accessible for residents, collectors, and 
+            administrators across Kenya.
           </p>
 
-          <ul className="flex flex-wrap gap-4">
+          <ul className="flex flex-wrap gap-4 justify-center pt-4 text-white">
             {features.map((feature) => (
               <li 
                 key={feature} 
-                className="flex items-center gap-2 text-primary-foreground/90"
+                className="flex items-center gap-2"
               >
                 <CheckCircle className="h-5 w-5 text-accent" />
-                <span className="text-sm font-medium">{feature}</span>
+                <span className="font-medium">{feature}</span>
               </li>
             ))}
           </ul>
 
-          <div className="flex flex-wrap gap-4 pt-4">
-            <Button variant="hero" size="xl" asChild>
+          <div className="flex flex-wrap gap-4 pt-4 justify-center">
+            <Button variant="hero" asChild className="bg-[#1D9E75] hover:bg-[#0b9c8a] text-primary-foreground">
               <Link to="/register">
                 Schedule Pickup
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
-            <Button variant="hero-outline" size="xl" asChild>
+            <Button variant="hero-outline" asChild>
               <Link to="/about">Learn More</Link>
             </Button>
           </div>

@@ -9,7 +9,7 @@ const Header = () => {
 
   const navLinks = [
     { to: "/", label: "Home" },
-    { to: "/about", label: "About" },
+    { to: "/about", label: "Features" },
     { to: "/services", label: "Services" },
     { to: "/contact", label: "Contact" },
   ];
@@ -20,8 +20,8 @@ const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105">
-            <Recycle className="h-6 w-6" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform group-hover:scale-105 overflow-hidden">
+            <img src="/favicon.ico" alt="CleanTruck logo" className="h-6 w-6 object-contain" />
           </div>
           <span className="text-xl font-bold text-foreground">CleanTruck</span>
         </Link>
@@ -46,7 +46,7 @@ const Header = () => {
           <Button variant="ghost" asChild>
             <Link to="/login">Sign In</Link>
           </Button>
-          <Button asChild>
+          <Button asChild >
             <Link to="/register">Get Started</Link>
           </Button>
         </div>

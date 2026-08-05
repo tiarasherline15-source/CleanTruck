@@ -15,9 +15,18 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["'Plus Jakarta Sans'", "system-ui", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       colors: {
+        tealSage: {
+          primary: '#0F6E56',
+          action: '#1D9E75',
+          accent: '#9FE1CB',
+          background: '#E1F5EE',
+          surface: '#F6FAFA',
+          border: '#b8e0d4',
+          text: '#444441',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

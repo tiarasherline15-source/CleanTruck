@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,11 +6,20 @@
 
 @layer base {
   :root {
+    /* Design tokens (Teal & Sage) */
+    --color-primary: #1D9E75;
+    --color-action: #1D9E75;
+    --color-accent: #9FE1CB;
+    --color-background: #E1F5EE;
+    --color-surface: #F6FAFA;
+    --color-border: #b8e0d4;
+    --color-text: #444441;
+
     --background: 45 20% 98%;
     --foreground: 150 30% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 150 30% 15%;
+    --card: 180 67% 97%;
+    --card-foreground: 60 6% 27%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 150 30% 15%;
@@ -110,8 +119,10 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    @apply font-sans antialiased;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {

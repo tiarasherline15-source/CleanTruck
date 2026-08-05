@@ -33,7 +33,7 @@ const HowItWorksSection = () => {
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            How It <span className="text-primary">Works</span>
+            How It <span className="text-[#0eecb4]">Works</span>
           </h2>
           <p className="text-muted-foreground text-lg">
             Getting started with CleanTruck is simple. Follow these easy steps to schedule your first collection.
@@ -48,14 +48,14 @@ const HowItWorksSection = () => {
                 <div className="hidden lg:block absolute top-16 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
               )}
               
-              <div className="relative flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+              <div className="relative flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 ">
                 {/* Step Number Badge */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#1D9E75] text-primary-foreground text-xs font-bold">
                   Step {item.step}
                 </div>
                 
                 {/* Icon */}
-                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-[#0b9c8a] group-hover:text-primary-foreground transition-colors duration-300">
                   <item.icon className="h-8 w-8" />
                 </div>
                 
