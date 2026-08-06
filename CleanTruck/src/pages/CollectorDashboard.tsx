@@ -74,8 +74,8 @@ const mockHistory = [
 
 const priorityConfig = {
   high: { label: "High", className: "bg-destructive/10 text-destructive border-destructive/20" },
-  normal: { label: "Normal", className: "bg-primary/10 text-primary border-primary/20" },
-  low: { label: "Low", className: "bg-muted text-muted-foreground border-muted" },
+  normal: { label: "Normal", className: "bg-[#b8e0d4] text-[#444441] border-[#b8e0d4]" },
+  low: { label: "Low", className: "bg-[#E1F5EE] text-[#6B9E8A] border-[#E1F5EE]" },
 };
 
 const wasteTypeIcons: Record<string, string> = {
@@ -116,16 +116,14 @@ const CollectorDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen" style={{ backgroundColor: "#E1F5EE" }}>
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-card hidden lg:block">
-        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-            <Truck className="h-5 w-5" />
-          </div>
+      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r hidden lg:block" style={{ backgroundColor: "#0F6E56", borderColor: "#b8e0d4" }}>
+        <div className="flex h-16 items-center gap-2 border-b px-6" style={{ borderColor: "#b8e0d4" }}>
+          <img src="/favicon-32x32.png" alt="CleanTruck favicon" className="h-8 w-8 rounded-md" />
           <div>
-            <span className="text-lg font-bold">CleanTruck</span>
-            <p className="text-xs text-muted-foreground">Collector Portal</p>
+            <span className="text-lg font-bold text-white">CleanTruck</span>
+            
           </div>
         </div>
         
@@ -135,10 +133,9 @@ const CollectorDashboard = () => {
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === item.id 
-                  ? "bg-secondary text-secondary-foreground" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                activeTab === item.id ? "" : "hover:bg-[#1D9E75]/20"
               }`}
+              style={activeTab === item.id ? { backgroundColor: "#1D9E75", color: "white" } : { color: "#9FE1CB" }}
             >
               <item.icon className="h-4 w-4" />
               {item.label}
@@ -146,8 +143,8 @@ const CollectorDashboard = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start gap-3" asChild>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: "#b8e0d4" }}>
+          <Button variant="ghost" className="w-full justify-start gap-3" asChild style={{ color: "#6B9E8A" }}>
             <Link to="/">
               <LogOut className="h-4 w-4" />
               Sign Out
@@ -161,7 +158,7 @@ const CollectorDashboard = () => {
         {/* Top Bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div>
-            <h1 className="text-xl font-semibold">Welcome, Mike 🚛</h1>
+            <h1 className="text-xl font-semibold">Welcome, Mike</h1>
             <p className="text-sm text-muted-foreground">Today is January 10, 2026</p>
           </div>
           <div className="flex items-center gap-3">
@@ -171,7 +168,7 @@ const CollectorDashboard = () => {
                 Pause Route
               </Button>
             ) : (
-              <Button size="sm" className="gap-2 bg-success hover:bg-success/90" onClick={() => setIsRouteActive(true)}>
+              <Button size="sm" className="gap-2 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => setIsRouteActive(true)}>
                 <Play className="h-4 w-4" />
                 Start Route
               </Button>
@@ -210,14 +207,14 @@ const CollectorDashboard = () => {
           {/* Stats Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
-              <Card key={stat.label} className="border-border/50">
+              <Card key={stat.label} className="border-[#b8e0d4]" style={{ backgroundColor: "#F6FAFA" }}>
                 <CardContent className="flex items-center gap-4 p-6">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-muted ${stat.color}`}>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: "#E1F5EE", color: "#1D9E75" }}>
                     <stat.icon className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold" style={{ color: "#0F6E56" }}>{stat.value}</p>
+                    <p className="text-sm" style={{ color: "#444441" }}>{stat.label}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -235,7 +232,7 @@ const CollectorDashboard = () => {
                   </CardTitle>
                   <CardDescription>Your scheduled waste collections for today</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-sm">
+                <Badge variant="outline" className="text-sm border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">
                   {pendingPickups} remaining
                 </Badge>
               </CardHeader>
@@ -252,7 +249,7 @@ const CollectorDashboard = () => {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4 flex-1">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-2xl">
-                          {wasteTypeIcons[pickup.wasteType] || "🗑️"}
+                          {wasteTypeIcons[pickup.wasteType] || ""}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -297,7 +294,7 @@ const CollectorDashboard = () => {
                         {pickup.status !== "completed" && (
                           <Button 
                             size="sm" 
-                            className="gap-1 bg-success hover:bg-success/90"
+                            className="gap-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56]"
                             onClick={() => handleCompletePickup(pickup.id)}
                           >
                             <Check className="h-4 w-4" />
@@ -332,9 +329,10 @@ const CollectorDashboard = () => {
                     key={route.id} 
                     className={`p-5 rounded-xl border transition-all ${
                       route.status === "active" 
-                        ? "border-success/30 bg-success/5" 
+                        ? "border-[#b8e0d4]" 
                         : "bg-muted/30 hover:border-primary/30"
                     }`}
+                    style={route.status === "active" ? { backgroundColor: "#E1F5EE", borderColor: "#b8e0d4" } : undefined}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -347,7 +345,7 @@ const CollectorDashboard = () => {
                           <div className="flex items-center gap-2">
                             <p className="font-semibold">{route.name}</p>
                             {route.status === "active" && (
-                              <Badge className="bg-success text-success-foreground">Active</Badge>
+                              <Badge className="bg-[#9FE1CB] text-[#0F6E56]">Active</Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -366,7 +364,7 @@ const CollectorDashboard = () => {
                           </div>
                         </div>
                       </div>
-                      <Button variant={route.status === "active" ? "secondary" : "outline"} size="sm">
+                      <Button variant={route.status === "active" ? "secondary" : "outline"} size="sm" className={route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}>
                         {route.status === "active" ? "View Map" : "Start Route"}
                       </Button>
                     </div>
@@ -412,7 +410,7 @@ const CollectorDashboard = () => {
                           </td>
                           <td className="py-3 px-4 text-muted-foreground">{record.route}</td>
                           <td className="py-3 px-4">
-                            <Badge variant="outline">{record.pickups} pickups</Badge>
+                            <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">{record.pickups} pickups</Badge>
                           </td>
                           <td className="py-3 px-4 font-medium">{record.weight}</td>
                           <td className="py-3 px-4 text-muted-foreground">{record.duration}</td>

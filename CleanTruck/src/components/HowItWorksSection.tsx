@@ -55,7 +55,7 @@ const HowItWorksSection = () => {
                 </div>
                 
                 {/* Icon */}
-                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-[#0b9c8a] group-hover:text-primary-foreground transition-colors duration-300">
+                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-[#0b9c8a] transition-colors duration-300" style={{ color: "#1D9E75" }}>
                   <item.icon className="h-8 w-8" />
                 </div>
                 

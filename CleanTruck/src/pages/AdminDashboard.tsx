@@ -126,16 +126,14 @@ const AdminDashboard = () => {
   const maxCollections = Math.max(...weeklyStats.map(d => d.collections));
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen" style={{ backgroundColor: "#E1F5EE", color: "#444441" }}>
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-card hidden lg:block">
-        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Recycle className="h-5 w-5" />
-          </div>
+      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r hidden lg:block" style={{ backgroundColor: "#0F6E56", borderColor: "#b8e0d4" }}>
+        <div className="flex h-16 items-center gap-2 border-b px-6" style={{ borderColor: "#b8e0d4" }}>
+          <img src="/favicon-32x32.png" alt="CleanTruck favicon" className="h-8 w-8 rounded-md" />
           <div>
-            <span className="text-lg font-bold">CleanTruck</span>
-            <p className="text-xs text-muted-foreground">Admin Portal</p>
+            <span className="text-lg font-bold text-white">CleanTruck</span>
+          
           </div>
         </div>
         
@@ -145,10 +143,9 @@ const AdminDashboard = () => {
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === item.id 
-                  ? "bg-primary text-primary-foreground" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                activeTab === item.id ? "" : "hover:bg-[#1D9E75]/20"
               }`}
+              style={activeTab === item.id ? { backgroundColor: "#1D9E75", color: "white" } : { color: "#9FE1CB" }}
             >
               <item.icon className="h-4 w-4" />
               {item.label}
@@ -156,8 +153,8 @@ const AdminDashboard = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start gap-3" asChild>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: "#b8e0d4" }}>
+          <Button variant="ghost" className="w-full justify-start gap-3" asChild style={{ color: "#6B9E8A" }}>
             <Link to="/">
               <LogOut className="h-4 w-4" />
               Sign Out
@@ -169,10 +166,10 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <main className="lg:ml-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-6" style={{ backgroundColor: "#F6FAFA", borderBottomColor: "#b8e0d4" }}>
           <div>
-            <h1 className="text-xl font-semibold">Admin Dashboard 📊</h1>
-            <p className="text-sm text-muted-foreground">System overview and management</p>
+            <h1 className="text-xl font-semibold" style={{ color: "#0F6E56" }}>Admin Dashboard</h1>
+            <p className="text-sm" style={{ color: "#444441" }}>System overview and management</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" className="gap-2">
@@ -216,11 +213,11 @@ const AdminDashboard = () => {
                 {/* Weekly Collections Chart */}
                 <Card className="border-border/50">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-primary" />
+                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      <BarChart3 className="h-5 w-5" style={{ color: "#1D9E75" }} />
                       Weekly Collections
                     </CardTitle>
-                    <CardDescription>Collection trends over the past week</CardDescription>
+                    <CardDescription style={{ color: "#444441" }}>Collection trends over the past week</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-end justify-between gap-2 h-48">
@@ -243,11 +240,11 @@ const AdminDashboard = () => {
                 {/* Waste Distribution */}
                 <Card className="border-border/50">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PieChart className="h-5 w-5 text-secondary" />
+                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      <PieChart className="h-5 w-5" style={{ color: "#1D9E75" }} />
                       Waste Distribution
                     </CardTitle>
-                    <CardDescription>Breakdown by waste type</CardDescription>
+                    <CardDescription style={{ color: "#444441" }}>Breakdown by waste type</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {wasteDistribution.map((item) => (
@@ -334,8 +331,8 @@ const AdminDashboard = () => {
               {/* Alerts */}
               <Card className="border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-accent" />
+                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      <Activity className="h-5 w-5" style={{ color: "#1D9E75" }} />
                     Recent Activity & Alerts
                   </CardTitle>
                 </CardHeader>
@@ -366,11 +363,11 @@ const AdminDashboard = () => {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-primary" />
+                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      <Users className="h-5 w-5" style={{ color: "#1D9E75" }} />
                       User Management
                     </CardTitle>
-                    <CardDescription>Manage residents, collectors, and administrators</CardDescription>
+                    <CardDescription style={{ color: "#444441" }}>Manage residents, collectors, and administrators</CardDescription>
                   </div>
                   <Button className="gap-2">
                     <User className="h-4 w-4" />
@@ -474,11 +471,11 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileBarChart className="h-5 w-5 text-primary" />
+                      <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                        <FileBarChart className="h-5 w-5" style={{ color: "#1D9E75" }} />
                         Monthly Reports
                       </CardTitle>
-                      <CardDescription>Historical collection data and trends</CardDescription>
+                      <CardDescription style={{ color: "#444441" }}>Historical collection data and trends</CardDescription>
                     </div>
                     <Button variant="outline" size="sm" className="gap-2">
                       <Download className="h-4 w-4" />
@@ -546,11 +543,11 @@ const AdminDashboard = () => {
               {/* Sector Performance */}
               <Card className="border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-secondary" />
+                  <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                    <MapPin className="h-5 w-5" style={{ color: "#1D9E75" }} />
                     Sector Performance
                   </CardTitle>
-                  <CardDescription>Collection efficiency by sector</CardDescription>
+                  <CardDescription style={{ color: "#444441" }}>Collection efficiency by sector</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">

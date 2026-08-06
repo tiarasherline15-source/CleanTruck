@@ -56,7 +56,7 @@ const FeaturesSection = () => {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4 group-hover:scale-110 transition-transform duration-300">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 mb-4 group-hover:scale-110 transition-transform duration-300" style={{ color: "#1D9E75" }}>
                   <feature.icon className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-xl">{feature.title}</CardTitle>

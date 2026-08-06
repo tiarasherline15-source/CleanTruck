@@ -40,7 +40,7 @@ const HeroSection = () => {
                 key={feature} 
                 className="flex items-center gap-2"
               >
-                <CheckCircle className="h-5 w-5 text-accent" />
+                <CheckCircle className="h-5 w-5" style={{ color: "#1D9E75" }} />
                 <span className="font-medium">{feature}</span>
               </li>
             ))}
