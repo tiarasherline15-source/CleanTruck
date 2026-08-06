@@ -40,14 +40,13 @@ const Register = () => {
           Back to Home
         </Link>
 
-        <Card className="border-border/50 shadow-xl">
+        <Card className="border-border/50 shadow-xl" style={{ backgroundColor: "#F6FAFA" }}>
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <Recycle className="h-8 w-8" />
-            </div>
             <div>
-              <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-2xl font-bold" style={{ color: "#0F6E56" }}>
+                Create Account
+              </CardTitle>
+              <CardDescription className="text-base mt-2" style={{ color: "#6B9E8A" }}>
                 Register to start scheduling waste collection
               </CardDescription>
             </div>
@@ -57,30 +56,34 @@ const Register = () => {
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name" className="text-[#444441]">
+                    Full Name
+                  </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="name"
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={(e) => handleChange("name", e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone" className="text-[#444441]">
+                    Phone Number
+                  </Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="phone"
                       placeholder="+254 700 123 456"
                       value={formData.phone}
                       onChange={(e) => handleChange("phone", e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
                   </div>
@@ -88,40 +91,46 @@ const Register = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email" className="text-[#444441]">
+                  Email Address
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@example.com"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address" className="text-[#444441]">
+                  Address
+                </Label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                   <Input
                     id="address"
                     placeholder="123 Main Street, Westlands"
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="zone">Collection Zone</Label>
+                <Label htmlFor="zone" className="text-[#444441]">
+                  Collection Zone
+                </Label>
                 <Select onValueChange={(value) => handleChange("zone", value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]">
                     <SelectValue placeholder="Select your zone" />
                   </SelectTrigger>
                   <SelectContent>
@@ -139,32 +148,36 @@ const Register = () => {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-[#444441]">
+                    Password
+                  </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="password"
                       type="password"
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => handleChange("password", e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-[#444441]">
+                    Confirm Password
+                  </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="confirmPassword"
                       type="password"
                       placeholder="••••••••"
                       value={formData.confirmPassword}
                       onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                      className="pl-10"
+                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
                   </div>
@@ -173,12 +186,12 @@ const Register = () => {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" size="lg">
+              <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
                 Create Account
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{" "}
-                <Link to="/login" className="text-primary font-medium hover:underline">
+                <Link to="/login" className="text-[#1D9E75] font-medium hover:underline">
                   Sign in
                 </Link>
               </p>

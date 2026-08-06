@@ -28,14 +28,13 @@ const Login = () => {
           Back to Home
         </Link>
 
-        <Card className="border-border/50 shadow-xl">
+        <Card className="border-border/50 shadow-xl" style={{ backgroundColor: "#F6FAFA" }}>
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <Recycle className="h-8 w-8" />
-            </div>
             <div>
-              <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-2xl font-bold" style={{ color: "#0F6E56" }}>
+                Welcome Back
+              </CardTitle>
+              <CardDescription className="text-base mt-2" style={{ color: "#6B9E8A" }}>
                 Sign in to manage your waste collection
               </CardDescription>
             </div>
@@ -44,16 +43,18 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email" className="text-[#444441]">
+                  Email Address
+                </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                     required
                   />
                 </div>
@@ -61,23 +62,25 @@ const Login = () => {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-[#444441]">
+                    Password
+                  </Label>
                   <Link 
                     to="/forgot-password" 
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-[#1D9E75] hover:underline"
                   >
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                     required
                   />
                 </div>
@@ -85,12 +88,12 @@ const Login = () => {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" size="lg">
+              <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
                 Sign In
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-primary font-medium hover:underline">
+                <Link to="/register" className="text-[#1D9E75] font-medium hover:underline">
                   Sign up
                 </Link>
               </p>

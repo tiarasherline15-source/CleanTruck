@@ -4,7 +4,7 @@ import { ArrowRight, Recycle } from "lucide-react";
 
 const CTASection = () => {
   return (
-    <section className="py-20 bg-muted/30">
+    <section id="about" className="py-20 bg-muted/30">
       <div className="container">
         <div
         className="relative overflow-hidden rounded-3xl bg-cover bg-center p-8 sm:p-12 lg:p-16"

@@ -6,30 +6,34 @@ const steps = [
     step: "01",
     title: "Create Account",
     description: "Sign up as a resident to access the scheduling system.",
+    color: "#2563EB",
   },
   {
     icon: CalendarCheck,
     step: "02",
     title: "Schedule Pickup",
     description: "Choose your preferred date, time, and waste type.",
+    color: "#7C3AED",
   },
   {
     icon: Truck,
     step: "03",
     title: "Collection",
     description: "Our collectors arrive at your location for pickup.",
+    color: "#0D9488",
   },
   {
     icon: ThumbsUp,
     step: "04",
     title: "Confirmation",
     description: "Receive confirmation once collection is complete.",
+    color: "#059669",
   },
 ];
 
 const HowItWorksSection = () => {
   return (
-    <section className="py-20 bg-background">
+    <section id="how-it-works" className="py-20 bg-background">
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
@@ -55,7 +59,7 @@ const HowItWorksSection = () => {
                 </div>
                 
                 {/* Icon */}
-                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-[#0b9c8a] transition-colors duration-300" style={{ color: "#1D9E75" }}>
+                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-[#0b9c8a] transition-colors duration-300" style={{ color: item.color }}>
                   <item.icon className="h-8 w-8" />
                 </div>
                 

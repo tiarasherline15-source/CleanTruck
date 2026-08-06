@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,7 +86,7 @@ const roleConfig = {
 
 const statusConfig = {
   active: { label: "Active", className: "bg-success/10 text-success border-success/20" },
-  inactive: { label: "Inactive", className: "bg-muted text-muted-foreground border-muted" },
+  inactive: { label: "Inactive", className: "text-muted-foreground border-muted", style: { backgroundColor: "#E1F5EE" } },
   on_leave: { label: "On Leave", className: "bg-warning/10 text-warning border-warning/20" },
 };
 
@@ -116,8 +117,7 @@ const AdminDashboard = () => {
   ];
 
   const navItems = [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "users", label: "User Management", icon: Users },
     { id: "reports", label: "Collection Reports", icon: FileBarChart },
     { id: "settings", label: "Settings", icon: Settings },
@@ -168,12 +168,11 @@ const AdminDashboard = () => {
         {/* Top Bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-6" style={{ backgroundColor: "#F6FAFA", borderBottomColor: "#b8e0d4" }}>
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: "#0F6E56" }}>Admin Dashboard</h1>
-            <p className="text-sm" style={{ color: "#444441" }}>System overview and management</p>
+            
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
               Export Data
             </Button>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -183,13 +182,16 @@ const AdminDashboard = () => {
         </header>
 
         <div className="p-6 space-y-6">
+          {/* Welcome Card */}
+          <WelcomeCard userName="Admin" />
+
           {/* Stats Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
               <Card key={stat.label} className="border-border/50">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-muted ${stat.color}`}>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.color}`} style={{ backgroundColor: "#E1F5EE" }}>
                       <stat.icon className="h-6 w-6" />
                     </div>
                     <div className={`flex items-center gap-1 text-sm ${stat.trendUp ? 'text-success' : 'text-destructive'}`}>
@@ -209,12 +211,39 @@ const AdminDashboard = () => {
           {/* Overview Section */}
           {(activeTab === "overview" || activeTab === "analytics") && (
             <>
+            {/* Alerts */}
+              <Card className="border-border/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      <Activity className="h-5 w-5" style={{ color: "#D97706" }} />
+                    Recent Activity & Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {alerts.map((alert) => {
+                    const config = alertTypeConfig[alert.type as keyof typeof alertTypeConfig];
+                    const Icon = config.icon;
+                    return (
+                      <div key={alert.id} className="flex items-center gap-4 p-3 rounded-lg border" style={{ backgroundColor: "#F6FAFA", borderColor: "#b8e0d4" }}>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: "#E1F5EE" }}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{alert.message}</p>
+                          <p className="text-xs text-muted-foreground">{alert.time}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+              
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Weekly Collections Chart */}
                 <Card className="border-border/50">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <BarChart3 className="h-5 w-5" style={{ color: "#1D9E75" }} />
+                      <BarChart3 className="h-5 w-5" style={{ color: "#4F46E5" }} />
                       Weekly Collections
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Collection trends over the past week</CardDescription>
@@ -241,7 +270,7 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <PieChart className="h-5 w-5" style={{ color: "#1D9E75" }} />
+                      <PieChart className="h-5 w-5" style={{ color: "#7C3AED" }} />
                       Waste Distribution
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Breakdown by waste type</CardDescription>
@@ -253,7 +282,7 @@ const AdminDashboard = () => {
                           <span className="font-medium">{item.type}</span>
                           <span className="text-muted-foreground">{item.percentage}%</span>
                         </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#E1F5EE" }}>
                           <div 
                             className={`h-full ${item.color} rounded-full transition-all`}
                             style={{ width: `${item.percentage}%` }}
@@ -308,7 +337,7 @@ const AdminDashboard = () => {
                     <div className="flex h-24 items-center justify-center">
                       <div className="text-center">
                         <p className="text-3xl font-bold text-secondary">{analyticsData.avgResponseTime}</p>
-                        <Clock className="h-5 w-5 mx-auto mt-2 text-muted-foreground" />
+                        <Clock className="h-5 w-5 mx-auto mt-2" style={{ color: "#D97706" }} />
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">Avg Response Time</p>
@@ -320,7 +349,7 @@ const AdminDashboard = () => {
                     <div className="flex h-24 items-center justify-center">
                       <div className="text-center">
                         <p className="text-3xl font-bold text-accent">+{analyticsData.weeklyGrowth}%</p>
-                        <TrendingUp className="h-5 w-5 mx-auto mt-2 text-success" />
+                        <TrendingUp className="h-5 w-5 mx-auto mt-2" style={{ color: "#059669" }} />
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">Weekly Growth</p>
@@ -328,32 +357,7 @@ const AdminDashboard = () => {
                 </Card>
               </div>
 
-              {/* Alerts */}
-              <Card className="border-border/50">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Activity className="h-5 w-5" style={{ color: "#1D9E75" }} />
-                    Recent Activity & Alerts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {alerts.map((alert) => {
-                    const config = alertTypeConfig[alert.type as keyof typeof alertTypeConfig];
-                    const Icon = config.icon;
-                    return (
-                      <div key={alert.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.className}`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{alert.message}</p>
-                          <p className="text-xs text-muted-foreground">{alert.time}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+            
             </>
           )}
 
@@ -364,7 +368,7 @@ const AdminDashboard = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Users className="h-5 w-5" style={{ color: "#1D9E75" }} />
+                      <Users className="h-5 w-5" style={{ color: "#2563EB" }} />
                       User Management
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Manage residents, collectors, and administrators</CardDescription>
@@ -379,7 +383,7 @@ const AdminDashboard = () => {
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B7280" }} />
                     <Input 
                       placeholder="Search users..." 
                       value={searchQuery}
@@ -417,10 +421,10 @@ const AdminDashboard = () => {
                     </thead>
                     <tbody>
                       {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b border-border/50 hover:bg-muted/30">
+                        <tr key={user.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground" style={{ backgroundColor: "#E1F5EE" }}>
                                 <User className="h-4 w-4" />
                               </div>
                               <div>
@@ -444,10 +448,10 @@ const AdminDashboard = () => {
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-end gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-4 w-4" style={{ color: "#0EA5E9" }} />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-4 w-4" style={{ color: "#D97706" }} />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                                 <Trash2 className="h-4 w-4" />
@@ -472,13 +476,13 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                        <FileBarChart className="h-5 w-5" style={{ color: "#1D9E75" }} />
+                        
                         Monthly Reports
                       </CardTitle>
                       <CardDescription style={{ color: "#444441" }}>Historical collection data and trends</CardDescription>
                     </div>
                     <Button variant="outline" size="sm" className="gap-2">
-                      <Download className="h-4 w-4" />
+                      <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
                       Export All
                     </Button>
                   </div>
@@ -498,11 +502,11 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {mockReports.map((report) => (
-                          <tr key={report.id} className="border-b border-border/50 hover:bg-muted/30">
+                          <tr key={report.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                  <Calendar className="h-4 w-4" />
+                                  <Calendar className="h-4 w-4" style={{ color: "#7C3AED" }} />
                                 </div>
                                 <span className="font-medium">{report.period}</span>
                               </div>
@@ -517,18 +521,18 @@ const AdminDashboard = () => {
                             </td>
                             <td className="py-3 px-4">
                               <Badge className="bg-success/10 text-success border-success/20">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                <CheckCircle2 className="h-3 w-3 mr-1" style={{ color: "#059669" }} />
                                 Completed
                               </Badge>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-end gap-2">
                                 <Button variant="outline" size="sm" className="gap-1">
-                                  <Eye className="h-4 w-4" />
+                                  <Eye className="h-4 w-4" style={{ color: "#0EA5E9" }} />
                                   View
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Download className="h-4 w-4" />
+                                  <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
                                 </Button>
                               </div>
                             </td>
@@ -544,7 +548,7 @@ const AdminDashboard = () => {
               <Card className="border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                    <MapPin className="h-5 w-5" style={{ color: "#1D9E75" }} />
+                    <MapPin className="h-5 w-5" style={{ color: "#E74C3C" }} />
                     Sector Performance
                   </CardTitle>
                   <CardDescription style={{ color: "#444441" }}>Collection efficiency by sector</CardDescription>
@@ -563,11 +567,11 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {sectorReports.map((sector) => (
-                          <tr key={sector.sector} className="border-b border-border/50 hover:bg-muted/30">
+                          <tr key={sector.sector} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
-                                  <MapPin className="h-4 w-4" />
+                                  <MapPin className="h-4 w-4" style={{ color: "#E74C3C" }} />
                                 </div>
                                 <span className="font-medium">{sector.sector}</span>
                               </div>
@@ -576,7 +580,7 @@ const AdminDashboard = () => {
                             <td className="py-3 px-4 text-muted-foreground">{sector.weight}</td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="w-20 h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#E1F5EE" }}>
                                   <div 
                                     className={`h-full rounded-full ${
                                       sector.efficiency >= 95 ? 'bg-success' : 
@@ -590,7 +594,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <Truck className="h-4 w-4 text-muted-foreground" />
+                                <Truck className="h-4 w-4" style={{ color: "#0D9488" }} />
                                 <span>{sector.collectors}</span>
                               </div>
                             </td>

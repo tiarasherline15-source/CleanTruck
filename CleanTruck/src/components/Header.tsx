@@ -1,20 +1,27 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Recycle, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const Header = () => {
-  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: "/", label: "Home" },
-    { to: "/about", label: "Features" },
-    { to: "/services", label: "Services" },
-    { to: "/contact", label: "Contact" },
+    { href: "#hero", label: "Home" },
+    { href: "#features", label: "Features" },
+    { href: "#how-it-works", label: "How It Works" },
+    { href: "#about", label: "About" },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const targetId = href.replace("#", "");
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth" });
+      setMobileMenuOpen(false);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -29,15 +36,14 @@ const Header = () => {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link.to) ? "text-primary" : "text-muted-foreground"
-              }`}
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={(e) => scrollToSection(e, link.href)}
+              className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground cursor-pointer"
             >
               {link.label}
-            </Link>
+            </a>
           ))}
         </nav>
 
@@ -69,18 +75,14 @@ const Header = () => {
         <div className="md:hidden border-t border-border bg-background animate-fade-in">
           <nav className="container py-4 space-y-2">
             {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(link.to)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`}
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={(e) => scrollToSection(e, link.href)}
+                className="block px-4 py-2 rounded-lg text-sm font-medium transition-colors text-foreground hover:bg-muted cursor-pointer"
               >
                 {link.label}
-              </Link>
+              </a>
             ))}
             <div className="pt-4 space-y-2">
               <Button variant="outline" className="w-full" asChild>
