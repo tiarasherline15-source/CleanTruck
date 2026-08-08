@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import NotificationDrawer from "@/components/ui/NotificationDrawer";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,6 +103,7 @@ const CollectorDashboard = () => {
   const [isRouteActive, setIsRouteActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   
   const completedPickups = pickups.filter(p => p.status === "completed").length;
   const pendingPickups = pickups.filter(p => p.status === "pending").length;
@@ -191,7 +193,10 @@ const CollectorDashboard = () => {
                 Start Route
               </Button>
             )}
-            <button className="relative p-2 rounded-full hover:bg-[#E1F5EE] transition-colors">
+            <button
+              className="relative p-2 rounded-full hover:bg-[#E1F5EE] transition-colors"
+              onClick={() => setNotificationsOpen(true)}
+            >
               <Bell className="h-5 w-5" style={{ color: "#D97706" }} />
               <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#1D9E75]" />
             </button>
@@ -219,7 +224,7 @@ const CollectorDashboard = () => {
                 {stats.map((stat) => (
                   <Card key={stat.label} className="border-[#b8e0d4]" style={{ backgroundColor: "#F6FAFA" }}>
                     <CardContent className="flex items-center gap-4 p-6">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: "#E1F5EE", color: "#1D9E75" }}>
+                      <div className="flex h-12 w-12 items-center justify-center" style={{ color: "#1D9E75" }}>
                         <stat.icon className="h-6 w-6" />
                       </div>
                       <div>
@@ -236,7 +241,7 @@ const CollectorDashboard = () => {
                 <Card className="border-success/30 bg-success/5">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success text-success-foreground animate-pulse">
+                      <div className="flex h-12 w-12 items-center justify-center animate-pulse" style={{ color: "#0F6E56" }}>
                         <Navigation className="h-6 w-6" />
                       </div>
                       <div>
@@ -260,7 +265,7 @@ const CollectorDashboard = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Package className="h-5 w-5" style={{ color: "#0D9488" }} />
+                      
                       Assigned Pickups
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Your scheduled waste collections for today</CardDescription>
@@ -281,7 +286,7 @@ const CollectorDashboard = () => {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4 flex-1">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E1F5EE] text-2xl">
+                          <div className="flex h-12 w-12 items-center justify-center text-2xl" style={{ color: "#1D9E75" }}>
                             {wasteTypeIcons[pickup.wasteType] || ""}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -350,7 +355,7 @@ const CollectorDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Route className="h-5 w-5" style={{ color: "#2563EB" }} />
+                      
                       Route Management
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Your assigned collection routes</CardDescription>
@@ -370,9 +375,7 @@ const CollectorDashboard = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                          route.status === "active" ? "bg-[#1D9E75] text-white" : "bg-[#E1F5EE] text-[#444441]"
-                        }`}>
+                        <div className="flex h-12 w-12 items-center justify-center" style={{ color: route.status === "active" ? "#ffffff" : "#444441" }}>
                           <Route className="h-6 w-6" />
                         </div>
                         <div>
@@ -414,7 +417,7 @@ const CollectorDashboard = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                    <History className="h-5 w-5" style={{ color: "#7C3AED" }} />
+                    
                     Collection History
                   </CardTitle>
                   <CardDescription style={{ color: "#444441" }}>Your past collection records</CardDescription>
@@ -458,6 +461,8 @@ const CollectorDashboard = () => {
           )}
         </div>
       </main>
+
+      <NotificationDrawer open={notificationsOpen} onOpenChange={setNotificationsOpen} />
 
       {/* ===== SETTINGS DIALOG ===== */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>

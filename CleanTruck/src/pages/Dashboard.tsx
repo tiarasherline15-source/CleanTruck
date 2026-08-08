@@ -21,6 +21,7 @@ import {
   Home, FileText, Settings, Bell, ChevronRight, Send, MapPin
 } from "lucide-react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import NotificationDrawer from "@/components/ui/NotificationDrawer";
 
 // Mock data for demonstration
 const mockRequests = [
@@ -46,6 +47,7 @@ const Dashboard = () => {
   const [viewAllOpen, setViewAllOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const stats = [
     { label: "Total Requests", value: "12", icon: FileText, color: "text-primary" },
@@ -144,7 +146,10 @@ const Dashboard = () => {
               <Plus className="h-4 w-4" />
               New Request
             </Button>
-            <button className="relative p-2 rounded-full hover:bg-[#E1F5EE] transition-colors">
+            <button
+              className="relative p-2 rounded-full hover:bg-[#E1F5EE] transition-colors"
+              onClick={() => setNotificationsOpen(true)}
+            >
               <Bell className="h-5 w-5" style={{ color: "#D97706" }} />
               <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#1D9E75]" />
             </button>
@@ -195,7 +200,7 @@ const Dashboard = () => {
                           className="flex items-center justify-between p-4 rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] hover:bg-[#E1F5EE] transition-colors"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E1F5EE]" style={{ color: "#0D9488" }}>
+                            <div className="flex h-10 w-10 items-center justify-center" style={{ color: "#0D9488" }}>
                               <Truck className="h-5 w-5" />
                             </div>
                             <div>
@@ -226,8 +231,8 @@ const Dashboard = () => {
                 {stats.map((stat) => (
                   <Card key={stat.label} className="border-[#b8e0d4] bg-[#F6FAFA]">
                     <CardContent className="flex items-center gap-4 p-6">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E1F5EE]">
-                        <stat.icon className="h-6 w-6" style={{ color: "#4F46E5" }} />
+                      <div className="flex h-12 w-12 items-center justify-center" style={{ color: "#4F46E5" }}>
+                        <stat.icon className="h-6 w-6" />
                       </div>
                       <div>
                         <p className="text-2xl font-bold" style={{ color: "#0F6E56" }}>{stat.value}</p>
@@ -258,7 +263,7 @@ const Dashboard = () => {
                         className="flex items-center justify-between p-4 rounded-lg bg-[#F6FAFA] hover:bg-[#E1F5EE] transition-colors"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E1F5EE]" style={{ color: "#059669" }}>
+                          <div className="flex h-10 w-10 items-center justify-center" style={{ color: "#059669" }}>
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                           <div>
@@ -284,6 +289,8 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+
+      <NotificationDrawer open={notificationsOpen} onOpenChange={setNotificationsOpen} />
 
       {/* ===== SCHEDULE PICKUP DIALOG ===== */}
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
@@ -500,7 +507,7 @@ const RequestsList = ({ requests }: { requests: typeof mockRequests }) => {
             style={{ borderColor: "#b8e0d4" }}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E1F5EE]" style={{ color: "#1D9E75" }}>
+              <div className="flex h-10 w-10 items-center justify-center" style={{ color: "#1D9E75" }}>
                 <Truck className="h-5 w-5" />
               </div>
               <div>

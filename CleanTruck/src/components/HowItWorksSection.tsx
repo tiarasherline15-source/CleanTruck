@@ -59,7 +59,7 @@ const HowItWorksSection = () => {
                 </div>
                 
                 {/* Icon */}
-                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-[#0b9c8a] transition-colors duration-300" style={{ color: item.color }}>
+                <div className="mt-4 mb-6 flex h-16 w-16 items-center justify-center transition-colors duration-300" style={{ color: item.color }}>
                   <item.icon className="h-8 w-8" />
                 </div>
                 

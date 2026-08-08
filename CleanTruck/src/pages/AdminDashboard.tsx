@@ -175,8 +175,8 @@ const AdminDashboard = () => {
               <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
               Export Data
             </Button>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <User className="h-5 w-5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
+              <User className="h-5 w-5 text-white" />
             </div>
           </div>
         </header>
@@ -186,27 +186,29 @@ const AdminDashboard = () => {
           <WelcomeCard userName="Admin" />
 
           {/* Stats Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat) => (
-              <Card key={stat.label} className="border-border/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.color}`} style={{ backgroundColor: "#E1F5EE" }}>
-                      <stat.icon className="h-6 w-6" />
+          {activeTab === "overview" && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {stats.map((stat) => (
+                <Card key={stat.label} className="border-border/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className={`flex h-12 w-12 items-center justify-center ${stat.color}`}>
+                        <stat.icon className="h-6 w-6" />
+                      </div>
+                      <div className={`flex items-center gap-1 text-sm ${stat.trendUp ? 'text-success' : 'text-destructive'}`}>
+                        {stat.trendUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                        {stat.trend}
+                      </div>
                     </div>
-                    <div className={`flex items-center gap-1 text-sm ${stat.trendUp ? 'text-success' : 'text-destructive'}`}>
-                      {stat.trendUp ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {stat.trend}
+                    <div className="mt-4">
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
                     </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {/* Overview Section */}
           {(activeTab === "overview" || activeTab === "analytics") && (
@@ -215,7 +217,7 @@ const AdminDashboard = () => {
               <Card className="border-border/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Activity className="h-5 w-5" style={{ color: "#D97706" }} />
+                      
                     Recent Activity & Alerts
                   </CardTitle>
                 </CardHeader>
@@ -225,7 +227,7 @@ const AdminDashboard = () => {
                     const Icon = config.icon;
                     return (
                       <div key={alert.id} className="flex items-center gap-4 p-3 rounded-lg border" style={{ backgroundColor: "#F6FAFA", borderColor: "#b8e0d4" }}>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: "#E1F5EE" }}>
+                        <div className="flex h-10 w-10 items-center justify-center" style={{ color: "#0F6E56" }}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
@@ -243,7 +245,7 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <BarChart3 className="h-5 w-5" style={{ color: "#4F46E5" }} />
+                      
                       Weekly Collections
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Collection trends over the past week</CardDescription>
@@ -270,7 +272,7 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <PieChart className="h-5 w-5" style={{ color: "#7C3AED" }} />
+                      
                       Waste Distribution
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Breakdown by waste type</CardDescription>
@@ -368,7 +370,7 @@ const AdminDashboard = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      <Users className="h-5 w-5" style={{ color: "#2563EB" }} />
+                     
                       User Management
                     </CardTitle>
                     <CardDescription style={{ color: "#444441" }}>Manage residents, collectors, and administrators</CardDescription>
@@ -424,7 +426,7 @@ const AdminDashboard = () => {
                         <tr key={user.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground" style={{ backgroundColor: "#E1F5EE" }}>
+                              <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#0F6E56" }}>
                                 <User className="h-4 w-4" />
                               </div>
                               <div>
@@ -505,8 +507,8 @@ const AdminDashboard = () => {
                           <tr key={report.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                  <Calendar className="h-4 w-4" style={{ color: "#7C3AED" }} />
+                                <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#7C3AED" }}>
+                                  <Calendar className="h-4 w-4" />
                                 </div>
                                 <span className="font-medium">{report.period}</span>
                               </div>
@@ -548,7 +550,7 @@ const AdminDashboard = () => {
               <Card className="border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                    <MapPin className="h-5 w-5" style={{ color: "#E74C3C" }} />
+                    
                     Sector Performance
                   </CardTitle>
                   <CardDescription style={{ color: "#444441" }}>Collection efficiency by sector</CardDescription>
@@ -570,8 +572,8 @@ const AdminDashboard = () => {
                           <tr key={sector.sector} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
-                                  <MapPin className="h-4 w-4" style={{ color: "#E74C3C" }} />
+                                <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#E74C3C" }}>
+                                  <MapPin className="h-4 w-4" />
                                 </div>
                                 <span className="font-medium">{sector.sector}</span>
                               </div>
