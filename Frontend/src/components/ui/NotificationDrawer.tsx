@@ -40,19 +40,17 @@ const sampleNotifications: NotificationItem[] = [
 const NotificationDrawer = ({ open, onOpenChange }: NotificationDrawerProps) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:w-full p-0 sm:max-w-md">
         <div className="flex h-full flex-col">
           <SheetHeader className="border-b border-border p-6 text-left">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
               <SheetTitle>Notifications</SheetTitle>
             </div>
-            <SheetDescription>
-              Stay updated with recent activity and pickup alerts.
-            </SheetDescription>
+           
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-3">
             {sampleNotifications.map((item) => (
               <div
                 key={item.id}

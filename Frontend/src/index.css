@@ -185,6 +185,14 @@
     animation: wave 1.6s ease-in-out infinite;
     transform-origin: 70% 70%;
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes fadeIn {

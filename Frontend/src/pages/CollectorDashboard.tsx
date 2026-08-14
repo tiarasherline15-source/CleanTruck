@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import MobileSidebar from "@/components/ui/MobileSidebar";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,14 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import DashboardDialog from "@/components/ui/DashboardDialog";
 import {
   Calendar, Clock, MapPin,
   CheckCircle2, LogOut, User,
@@ -178,10 +173,15 @@ const CollectorDashboard = () => {
       {/* Main Content */}
       <main className="lg:ml-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-6" style={{ backgroundColor: "#F6FAFA", borderBottomColor: "#b8e0d4" }}>
-          <div>
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 sm:px-6" style={{ backgroundColor: "#F6FAFA", borderBottomColor: "#b8e0d4" }}>
+          <div className="flex items-center gap-2">
+            <MobileSidebar
+              navItems={navItems}
+              activeTab={activeTab}
+              onTabChange={handleSidebarClick}
+            />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isRouteActive ? (
               <Button size="sm" variant="destructive" className="gap-2" onClick={() => setIsRouteActive(false)}>
                 <Pause className="h-4 w-4" />
@@ -212,24 +212,24 @@ const CollectorDashboard = () => {
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
-          {/* ===== OVERVIEW TAB ===== */}
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+          {/* OVERVIEW TAB */}
           {activeTab === "overview" && (
             <>
               {/* Welcome Card */}
               <WelcomeCard userName="Mike" />
 
               {/* Stats Grid */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
                 {stats.map((stat) => (
                   <Card key={stat.label} className="border-[#b8e0d4]" style={{ backgroundColor: "#F6FAFA" }}>
-                    <CardContent className="flex items-center gap-4 p-6">
-                      <div className="flex h-12 w-12 items-center justify-center" style={{ color: "#1D9E75" }}>
-                        <stat.icon className="h-6 w-6" />
+                    <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-6">
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center" style={{ color: "#1D9E75" }}>
+                        <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold" style={{ color: "#0F6E56" }}>{stat.value}</p>
-                        <p className="text-sm" style={{ color: "#444441" }}>{stat.label}</p>
+                        <p className="text-xl sm:text-2xl font-bold" style={{ color: "#0F6E56" }}>{stat.value}</p>
+                        <p className="text-xs sm:text-sm" style={{ color: "#444441" }}>{stat.label}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -239,22 +239,22 @@ const CollectorDashboard = () => {
               {/* Route Progress Banner */}
               {isRouteActive && (
                 <Card className="border-success/30 bg-success/5">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center animate-pulse" style={{ color: "#0F6E56" }}>
-                        <Navigation className="h-6 w-6" />
+                  <CardContent className="flex items-center justify-between p-3 sm:p-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center animate-pulse shrink-0" style={{ color: "#0F6E56" }}>
+                        <Navigation className="h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
                       <div>
-                        <p className="font-semibold text-success">Route Active</p>
-                        <p className="text-sm text-muted-foreground">Sector 5-7 Morning Route</p>
+                        <p className="font-semibold text-sm sm:text-base text-success">Route Active</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Sector 5-7 Morning Route</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">{completedPickups}/{pickups.length}</p>
-                      <p className="text-sm text-muted-foreground">Pickups Completed</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg sm:text-2xl font-bold">{completedPickups}/{pickups.length}</p>
+                      <p className="text-[11px] sm:text-sm text-muted-foreground">Pickups Completed</p>
                     </div>
                   </CardContent>
-                  <div className="px-4 pb-4">
+                  <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                     <Progress value={progressPercentage} className="h-2" />
                   </div>
                 </Card>
@@ -262,15 +262,15 @@ const CollectorDashboard = () => {
 
               {/* Assigned Pickups */}
               <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 sm:pb-6">
                   <div>
-                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
                       
                       Assigned Pickups
                     </CardTitle>
-                    <CardDescription style={{ color: "#444441" }}>Your scheduled waste collections for today</CardDescription>
+                    
                   </div>
-                  <Badge variant="outline" className="text-sm border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">
+                  <Badge variant="outline" className="text-xs sm:text-sm border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">
                     {pendingPickups} remaining
                   </Badge>
                 </CardHeader>
@@ -278,20 +278,20 @@ const CollectorDashboard = () => {
                 {pickups.map((pickup) => (
                     <div 
                       key={pickup.id} 
-                      className={`p-4 rounded-xl border transition-all ${
+                      className={`p-3 sm:p-4 rounded-xl border transition-all ${
                         pickup.status === "completed" 
                           ? "bg-success/5 border-success/20" 
                           : "bg-card hover:border-primary/30"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className="flex h-12 w-12 items-center justify-center text-2xl" style={{ color: "#1D9E75" }}>
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                        <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                          <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center text-xl sm:text-2xl shrink-0" style={{ color: "#1D9E75" }}>
                             {wasteTypeIcons[pickup.wasteType] || ""}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold" style={{ color: "#0F6E56" }}>{pickup.wasteType}</p>
+                              <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{pickup.wasteType}</p>
                               <Badge variant="outline" className={priorityConfig[pickup.priority as keyof typeof priorityConfig].className}>
                                 {priorityConfig[pickup.priority as keyof typeof priorityConfig].label}
                               </Badge>
@@ -302,31 +302,31 @@ const CollectorDashboard = () => {
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 text-sm mt-1" style={{ color: "#444441" }}>
-                              <MapPin className="h-3.5 w-3.5" />
-                              {pickup.address}
+                            <div className="flex items-center gap-1 text-xs sm:text-sm mt-1" style={{ color: "#444441" }}>
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{pickup.address}</span>
                             </div>
-                            <div className="flex items-center gap-4 mt-2 text-sm">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
-                                <User className="h-3.5 w-3.5" />
-                                {pickup.resident}
+                                <User className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{pickup.resident}</span>
                               </span>
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
-                                <Clock className="h-3.5 w-3.5" />
+                                <Clock className="h-3.5 w-3.5 shrink-0" />
                                 {pickup.scheduledTime}
                               </span>
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
-                                <Package className="h-3.5 w-3.5" />
+                                <Package className="h-3.5 w-3.5 shrink-0" />
                                 ~{pickup.estimatedWeight}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="icon" variant="outline" className="h-9 w-9">
+                        <div className="flex items-center gap-2 self-end sm:self-auto sm:shrink-0">
+                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9">
                             <Phone className="h-4 w-4" style={{ color: "#2563EB" }} />
                           </Button>
-                          <Button size="icon" variant="outline" className="h-9 w-9">
+                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9">
                             <Navigation className="h-4 w-4" style={{ color: "#0EA5E9" }} />
                           </Button>
                           {pickup.status !== "completed" && (
@@ -348,60 +348,60 @@ const CollectorDashboard = () => {
             </>
           )}
 
-          {/* ===== ROUTE MANAGEMENT TAB ===== */}
+          {/* ROUTE MANAGEMENT TAB */}
           {activeTab === "routes" && (
             <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
-              <CardHeader>
+              <CardHeader className="pb-3 sm:pb-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
                       
                       Route Management
                     </CardTitle>
-                    <CardDescription style={{ color: "#444441" }}>Your assigned collection routes</CardDescription>
+                    
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {mockRoutes.map((route) => (
                   <div 
                     key={route.id} 
-                    className={`p-5 rounded-xl border transition-all ${
+                    className={`p-3 sm:p-5 rounded-xl border transition-all ${
                       route.status === "active" 
                         ? "border-[#b8e0d4]" 
                         : "bg-[#E1F5EE]/50 hover:border-primary/30"
                     }`}
                     style={route.status === "active" ? { backgroundColor: "#E1F5EE", borderColor: "#b8e0d4" } : undefined}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center" style={{ color: route.status === "active" ? "#ffffff" : "#444441" }}>
-                          <Route className="h-6 w-6" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center shrink-0" style={{ color: route.status === "active" ? "#ffffff" : "#444441" }}>
+                          <Route className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-semibold" style={{ color: "#0F6E56" }}>{route.name}</p>
+                            <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{route.name}</p>
                             {route.status === "active" && (
                               <Badge className="bg-[#9FE1CB] text-[#0F6E56]">Active</Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 mt-1 text-sm" style={{ color: "#444441" }}>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm" style={{ color: "#444441" }}>
                             <span className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
+                              <MapPin className="h-3.5 w-3.5 shrink-0" />
                               {route.stops} stops
                             </span>
                             <span className="flex items-center gap-1">
-                              <Navigation className="h-3.5 w-3.5" />
+                              <Navigation className="h-3.5 w-3.5 shrink-0" />
                               {route.distance}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Timer className="h-3.5 w-3.5" style={{ color: "#D97706" }} />
+                              <Timer className="h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
                               {route.estimatedTime}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <Button variant={route.status === "active" ? "secondary" : "outline"} size="sm" className={route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}>
+                      <Button variant={route.status === "active" ? "secondary" : "outline"} size="sm" className={`w-full sm:w-auto ${route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}`}>
                         {route.status === "active" ? "View Map" : "Start Route"}
                       </Button>
                     </div>
@@ -411,21 +411,22 @@ const CollectorDashboard = () => {
             </Card>
           )}
 
-          {/* ===== COLLECTION HISTORY TAB ===== */}
+          {/* COLLECTION HISTORY TAB */}
           {activeTab === "history" && (
             <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle className="flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
                     
                     Collection History
                   </CardTitle>
-                  <CardDescription style={{ color: "#444441" }}>Your past collection records</CardDescription>
+                  
                 </div>
                 <Button variant="outline" size="sm">Export Report</Button>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden sm:block">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b" style={{ borderColor: "#b8e0d4" }}>
@@ -456,6 +457,26 @@ const CollectorDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+
+               {/* Mobile Cards */}
+                <div className="space-y-3 sm:hidden">
+                  {mockHistory.map((record) => (
+                    <div key={record.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" style={{ color: "#7C3AED" }} />
+                          <span className="font-medium text-sm" style={{ color: "#0F6E56" }}>{record.date}</span>
+                        </div>
+                        <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56] text-xs">{record.pickups} pickups</Badge>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 text-xs" style={{ color: "#444441" }}>
+                        <span>Route: {record.route}</span>
+                        <span className="font-medium" style={{ color: "#0F6E56" }}>{record.weight}</span>
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: "#444441" }}>Duration: {record.duration}</div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -464,104 +485,118 @@ const CollectorDashboard = () => {
 
       <NotificationDrawer open={notificationsOpen} onOpenChange={setNotificationsOpen} />
 
-      {/* ===== SETTINGS DIALOG ===== */}
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle style={{ color: "#0F6E56" }}>Settings</DialogTitle>
-            <DialogDescription>
-              Manage your collector preferences and notification settings.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
+      {/* SETTINGS DIALOG */}
+      <DashboardDialog
+        open={settingsOpen}
+        onOpenChange={(open) => {
+          setSettingsOpen(open);
+          if (!open) setActiveTab("overview");
+        }}
+        title="Settings"
+      >
+        <div className="space-y-6 py-4">
+          <div className="space-y-3">
+            <h4 className="font-medium" style={{ color: "#0F6E56" }}>Notifications</h4>
             <div className="space-y-3">
-              <h4 className="font-medium" style={{ color: "#0F6E56" }}>Notifications</h4>
-              <div className="space-y-3">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm" style={{ color: "#444441" }}>Email notifications</span>
-                  <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm" style={{ color: "#444441" }}>SMS notifications</span>
-                  <input type="checkbox" className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="text-sm" style={{ color: "#444441" }}>Route updates</span>
-                  <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-medium" style={{ color: "#0F6E56" }}>Preferences</h4>
-              <div className="space-y-2">
-                <Label htmlFor="default-route">Default Route</Label>
-                <Input id="default-route" placeholder="Enter your default route..." defaultValue="Sector 5-7" />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-medium" style={{ color: "#0F6E56" }}>Account</h4>
-              <div className="flex gap-3">
-                <Button variant="outline" size="sm">Change Password</Button>
-                <Button variant="outline" size="sm" className="text-[#dc2626] hover:text-[#dc2626]">Delete Account</Button>
-              </div>
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm" style={{ color: "#444441" }}>Email notifications</span>
+                <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm" style={{ color: "#444441" }}>SMS notifications</span>
+                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm" style={{ color: "#444441" }}>Route updates</span>
+                <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-[#1D9E75]" />
+              </label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button className="bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => setSettingsOpen(false)}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* ===== USER PROFILE DIALOG ===== */}
-      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle style={{ color: "#0F6E56" }}>User Profile</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F6E56]">
-                <User className="h-10 w-10 text-white" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>Mike Johnson</h3>
-                <p className="text-sm" style={{ color: "#444441" }}>mike.johnson@example.com</p>
-                <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
-              </div>
-            </div>
-
-            <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>+254 700 987 654</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#444441" }}>Zone</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>Sector 5-7</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>January 2026</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: "#444441" }}>Total Collections</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>248</span>
-              </div>
+          <div className="space-y-3">
+            <h4 className="font-medium" style={{ color: "#0F6E56" }}>Preferences</h4>
+            <div className="space-y-2">
+              <Label htmlFor="default-route">Default Route</Label>
+              <Input id="default-route" placeholder="Enter your default route..." defaultValue="Sector 5-7" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProfileOpen(false)}>Close</Button>
-            <Button className="bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => { setProfileOpen(false); setSettingsOpen(true); }}>
-              Edit Profile
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          <div className="space-y-3">
+            <h4 className="font-medium" style={{ color: "#0F6E56" }}>Account</h4>
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm">Change Password</Button>
+              <Button variant="outline" size="sm" className="text-[#dc2626] hover:text-[#dc2626]">Delete Account</Button>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="flex flex-row gap-2 sm:gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => {
+            setSettingsOpen(false);
+            setActiveTab("overview");
+          }}>Cancel</Button>
+          <Button className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => {
+            setSettingsOpen(false);
+            setActiveTab("overview");
+          }}>
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DashboardDialog>
+
+      {/* USER PROFILE DIALOG */}
+      <DashboardDialog
+        open={profileOpen}
+        onOpenChange={(open) => {
+          setProfileOpen(open);
+          if (!open) setActiveTab("overview");
+        }}
+        title="User Profile"
+      >
+        <div className="space-y-6 py-4">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F6E56]">
+              <User className="h-10 w-10 text-white" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>Mike Johnson</h3>
+              <p className="text-sm" style={{ color: "#444441" }}>mike.johnson@example.com</p>
+              <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>+254 700 987 654</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#444441" }}>Zone</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>Sector 5-7</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>January 2026</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm" style={{ color: "#444441" }}>Total Collections</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>248</span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="flex flex-row gap-2 sm:gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => {
+            setProfileOpen(false);
+            setActiveTab("overview");
+          }}>Close</Button>
+          <Button className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => {
+            setProfileOpen(false);
+            setSettingsOpen(true);
+            setActiveTab("settings");
+          }}>
+            Edit Profile
+          </Button>
+        </DialogFooter>
+      </DashboardDialog>
     </div>
   );
 };
