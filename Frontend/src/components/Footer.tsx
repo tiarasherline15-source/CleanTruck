@@ -4,8 +4,8 @@ import { Recycle, Mail, Phone, MapPin } from "lucide-react";
 const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground">
-      <div className="container py-12">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <div className="container py-8 sm:py-12 px-4 sm:px-6">
+        <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
@@ -21,13 +21,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-sm text-primary-foreground/70">
-              <li><Link to="/" className="hover:text-primary-foreground transition-colors">Home</Link></li>
-              <li><Link to="/about" className="hover:text-primary-foreground transition-colors">About Us</Link></li>
-              <li><Link to="/services" className="hover:text-primary-foreground transition-colors">Services</Link></li>
-              <li><Link to="/contact" className="hover:text-primary-foreground transition-colors">Contact</Link></li>
-            </ul>
+           
           </div>
 
           {/* Services */}

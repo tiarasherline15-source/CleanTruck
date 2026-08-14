@@ -16,8 +16,8 @@ const features = [
   },
   {
     icon: Clock,
-    title: "Timely Service",
-    description: "Reliable and punctual waste collection to keep your environment clean.",
+    title: "Route Optimization",
+    description: "Efficient route planning to minimize travel time and fuel consumption.",
     color: "#D97706",
   },
   {
@@ -42,19 +42,19 @@ const features = [
 
 const FeaturesSection = () => {
   return (
-    <section id="features" className="py-20 bg-muted/30">
-      <div className="container">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+    <section id="features" className="py-12 sm:py-20 bg-muted/30">
+      <div className="container px-4 sm:px-6">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-4xl font-bold text-foreground mb-4">
             Key <span className="text-[#0eecb4]">Features</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base sm:text-lg">
             Our platform bridges the gap between residents and waste collectors, 
             making urban sanitation more efficient and accountable.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ">
           {features.map((feature, index) => (
             <Card 
               key={feature.title} 

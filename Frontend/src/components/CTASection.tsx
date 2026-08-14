@@ -4,10 +4,10 @@ import { ArrowRight, Recycle } from "lucide-react";
 
 const CTASection = () => {
   return (
-    <section id="about" className="py-20 bg-muted/30">
-      <div className="container">
+    <section id="about" className="py-12 sm:py-20 bg-muted/30">
+      <div className="container px-4 sm:px-6">
         <div
-        className="relative overflow-hidden rounded-3xl bg-cover bg-center p-8 sm:p-12 lg:p-16"
+        className="relative overflow-hidden rounded-3xl bg-cover bg-center p-6 sm:p-12 lg:p-16"
         style={{ backgroundImage: `url('/hamza-javaid-PizD8punZsw-unsplash.jpg')` }}
       >
           {/* Decorative Pattern */}
@@ -22,10 +22,10 @@ const CTASection = () => {
           </div>
           
           <div className="relative z-10 max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4 sm:mb-6">
               Ready for a Cleaner Environment?
             </h2>
-            <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
+            <p className="text-sm sm:text-lg text-primary-foreground/80 mb-6 sm:mb-8 max-w-xl mx-auto">
               This platform is designed to improve the organization and efficiency of waste collection services by enabling better coordination between residents, collectors, and administrators. It helps address common challenges such as delayed collections, limited visibility of operations, 
               and poor communication by providing a structured and accountable approach to waste management.
             </p>

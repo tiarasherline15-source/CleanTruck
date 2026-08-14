@@ -38,7 +38,7 @@ export const WelcomeCard = ({ userName, children }: WelcomeCardProps) => {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl p-5 sm:p-6 animate-fade-in-up"
+      className="relative overflow-hidden rounded-2xl p-4 sm:p-6 animate-fade-in-up"
       style={{
         backgroundColor: "#0F6E56",
         boxShadow: "0 16px 36px -18px rgba(15, 110, 86, 0.45)",
@@ -47,7 +47,7 @@ export const WelcomeCard = ({ userName, children }: WelcomeCardProps) => {
       
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         
-        <div className="absolute -top-16 -right-16 h-64 w-64 rounded-full animate-float-slow" style={{ backgroundColor: "rgba(29, 158, 117, 0.45)" }}>
+        <div className="absolute -top-16 -right-16 h-48 sm:h-64 w-48 sm:w-64 rounded-full animate-float-slow" style={{ backgroundColor: "rgba(29, 158, 117, 0.45)" }}>
           <div className="absolute right-12 top-12 h-10 w-10 rounded-full" style={{ backgroundColor: "rgba(159, 225, 203, 0.3)" }} />
           <div className="absolute right-20 top-20 h-3 w-3 rounded-full" style={{ backgroundColor: "rgba(255, 255, 255, 0.4)" }} />
           <div className="absolute right-6 bottom-14 h-5 w-5 rounded-full" style={{ backgroundColor: "rgba(225, 245, 238, 0.25)" }} />

@@ -33,18 +33,18 @@ const steps = [
 
 const HowItWorksSection = () => {
   return (
-    <section id="how-it-works" className="py-20 bg-background">
-      <div className="container">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+    <section id="how-it-works" className="py-12 sm:py-20 bg-background">
+      <div className="container px-4 sm:px-6">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-4xl font-bold text-foreground mb-4">
             How It <span className="text-[#0eecb4]">Works</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base sm:text-lg">
             Getting started with CleanTruck is simple. Follow these easy steps to schedule your first collection.
           </p>
         </div>
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((item, index) => (
             <div key={item.step} className="relative group">
               {/* Connector Line */}

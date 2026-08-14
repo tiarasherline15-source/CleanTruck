@@ -10,6 +10,14 @@ const HeroSection = () => {
     "Reliable service",
   ];
 
+  const handleLearnMore = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const section = document.getElementById("about");
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -25,28 +33,28 @@ const HeroSection = () => {
         <div className="max-w-2xl w-full space-y-8 animate-fade-in-up flex flex-col items-center text-center">
           
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight max-w-3xl whitespace-nowrap">
-            Smarter Waste Solutions for <br></br><span className="text-3xl sm:text-4xl text-[#0eecb4] ">Cleaner Cities</span>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight max-w-3xl">
+            Smarter Waste Solutions for <br className="hidden sm:block" /><span className="text-2xl sm:text-4xl text-[#0eecb4]">Cleaner Cities</span>
           </h1>
 
-          <p className="text-lg text-white max-w-2xl">
+          <p className="text-base sm:text-lg text-white max-w-2xl px-2 sm:px-0">
             Schedule garbage collection with ease. Making waste collection more organized, reliable, and accessible for residents, collectors, and 
             administrators across Kenya.
           </p>
 
-          <ul className="flex flex-wrap gap-4 justify-center pt-4 text-white">
+          <ul className="flex flex-wrap gap-3 sm:gap-4 justify-center pt-4 text-white px-2 sm:px-0">
             {features.map((feature) => (
               <li 
                 key={feature} 
                 className="flex items-center gap-2"
               >
-                <CheckCircle className="h-5 w-5" style={{ color: "#1D9E75" }} />
-                <span className="font-medium">{feature}</span>
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: "#1D9E75" }} />
+                <span className="font-medium text-sm sm:text-base">{feature}</span>
               </li>
             ))}
           </ul>
 
-          <div className="flex flex-wrap gap-4 pt-4 justify-center">
+          <div className="flex flex-wrap gap-3 sm:gap-4 pt-4 justify-center px-2 sm:px-0">
             <Button variant="hero" asChild className="bg-[#1D9E75] hover:bg-[#0b9c8a] text-primary-foreground">
               <Link to="/register">
                 Schedule Pickup
@@ -54,7 +62,7 @@ const HeroSection = () => {
               </Link>
             </Button>
             <Button variant="hero-outline" asChild>
-              <Link to="/about">Learn More</Link>
+              <Link to="#about" onClick={handleLearnMore}>Learn More</Link>
             </Button>
           </div>
         </div>

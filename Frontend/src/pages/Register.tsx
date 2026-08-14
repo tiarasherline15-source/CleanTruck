@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Recycle, Mail, Lock, User, Phone, MapPin, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, Phone, MapPin, ArrowLeft } from "lucide-react";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -24,13 +24,11 @@ const Register = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement registration logic
-    console.log("Register:", formData);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
-      <div className="w-full max-w-lg space-y-6 animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-3 sm:px-4 py-8 sm:py-12">
+      <div className="w-full max-w-lg space-y-4 sm:space-y-6 animate-scale-in">
         {/* Back Link */}
         <Link 
           to="/" 
@@ -43,10 +41,10 @@ const Register = () => {
         <Card className="border-border/50 shadow-xl" style={{ backgroundColor: "#F6FAFA" }}>
           <CardHeader className="text-center space-y-4">
             <div>
-              <CardTitle className="text-2xl font-bold" style={{ color: "#0F6E56" }}>
+              <CardTitle className="text-xl sm:text-2xl font-bold" style={{ color: "#0F6E56" }}>
                 Create Account
               </CardTitle>
-              <CardDescription className="text-base mt-2" style={{ color: "#6B9E8A" }}>
+              <CardDescription className="text-sm sm:text-base mt-2" style={{ color: "#6B9E8A" }}>
                 
               </CardDescription>
             </div>
