@@ -33,8 +33,10 @@ const HeroSection = () => {
         <div className="max-w-2xl w-full space-y-8 animate-fade-in-up flex flex-col items-center text-center">
           
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight max-w-3xl">
-            Smarter Waste Solutions for <br className="hidden sm:block" /><span className="text-2xl sm:text-4xl text-[#0eecb4]">Cleaner Cities</span>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-tight lg:max-w-4xl w-full">
+            <span className="sm:whitespace-nowrap">Smarter Waste Solutions for</span>
+            <br />
+            <span className="text-2xl sm:text-4xl lg:text-5xl text-[#0eecb4]">Cleaner Cities</span>
           </h1>
 
           <p className="text-base sm:text-lg text-white max-w-2xl px-2 sm:px-0">
