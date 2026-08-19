@@ -1,0 +1,135 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type {
+  PickupRequest,
+  Route,
+  User,
+  Notification,
+  CollectionHistory,
+  PaginatedResponse,
+} from "@/lib/types";
+
+// ─── Pickup Requests ─────────────────────────────────────────────────────────
+export function usePickupRequests() {
+  return useQuery({
+    queryKey: ["pickup-requests"],
+    queryFn: () =>
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/"),
+  });
+}
+
+export function useMyPickupRequests() {
+  return useQuery({
+    queryKey: ["my-pickup-requests"],
+    queryFn: () =>
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/my/"),
+  });
+}
+
+export function useCreatePickupRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PickupRequest>) =>
+      api.post<PickupRequest>("/pickup-requests/", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pickup-requests"] });
+      qc.invalidateQueries({ queryKey: ["my-pickup-requests"] });
+    },
+  });
+}
+
+export function useUpdatePickupRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<PickupRequest> }) =>
+      api.patch<PickupRequest>(`/pickup-requests/${id}/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pickup-requests"] });
+      qc.invalidateQueries({ queryKey: ["my-pickup-requests"] });
+    },
+  });
+}
+
+export function useCollectorPickups() {
+  return useQuery({
+    queryKey: ["collector-pickups"],
+    queryFn: () =>
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/assigned/"),
+  });
+}
+
+// ─── Routes ──────────────────────────────────────────────────────────────────
+export function useRoutes() {
+  return useQuery({
+    queryKey: ["routes"],
+    queryFn: () =>
+      api.get<PaginatedResponse<Route> | Route[]>("/routes/"),
+  });
+}
+
+// ─── Users (Admin) ───────────────────────────────────────────────────────────
+export function useUsers(params?: { search?: string; role?: string; page?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.role && params.role !== "all") searchParams.set("role", params.role);
+  if (params?.page) searchParams.set("page", params.page.toString());
+
+  const query = searchParams.toString();
+  return useQuery({
+    queryKey: ["users", params],
+    queryFn: () =>
+      api.get<PaginatedResponse<User> | User[]>(`/users/${query ? `?${query}` : ""}`),
+  });
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: () =>
+      api.get<PaginatedResponse<Notification> | Notification[]>("/notifications/"),
+    refetchInterval: 30_000, // poll every 30s as fallback for WebSocket
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch(`/notifications/${id}/`, { is_read: true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post("/notifications/mark-all-read/"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+// ─── Collection History ──────────────────────────────────────────────────────
+export function useCollectionHistory() {
+  return useQuery({
+    queryKey: ["collection-history"],
+    queryFn: () =>
+      api.get<PaginatedResponse<CollectionHistory> | CollectionHistory[]>("/collection-history/"),
+  });
+}
+
+// ─── Admin Analytics ─────────────────────────────────────────────────────────
+export function useAnalytics() {
+  return useQuery({
+    queryKey: ["analytics"],
+    queryFn: () => api.get("/analytics/"),
+  });
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+export function useReports() {
+  return useQuery({
+    queryKey: ["reports"],
+    queryFn: () => api.get("/reports/"),
+  });
+}
