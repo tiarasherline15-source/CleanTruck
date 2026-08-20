@@ -9,7 +9,7 @@ import {
 import { api, clearTokens, setTokens, getAccessToken } from "@/lib/api";
 import type { User, AuthTokens, LoginPayload, RegisterPayload } from "@/lib/types";
 
-// ─── Context shape ───────────────────────────────────────────────────────────
+//  Context shape 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -22,7 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+//  Provider 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (payload: RegisterPayload) => {
-    await api.post<unknown>("/users/register/", payload);
+    await api.post<unknown>("/auth/register/", payload);
     // Auto-login after registration
     await login({ email: payload.email, password: payload.password });
   };
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
+//  Hook 
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) {

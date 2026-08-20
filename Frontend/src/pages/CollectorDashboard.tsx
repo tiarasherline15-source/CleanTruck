@@ -2,7 +2,7 @@ import { useState } from "react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import MobileSidebar from "@/components/ui/MobileSidebar";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,69 +15,19 @@ import {
   Calendar, Clock, MapPin,
   CheckCircle2, LogOut, User,
   Home, Route, History, Settings, Navigation,
-  Package, Timer, Phone, Play, Pause, Check, Bell
+  Package, Timer, Phone, Play, Pause, Check, Bell,
+  Loader2, AlertCircle
 } from "lucide-react";
+import { useCollectorPickups, useRoutes, useCollectionHistory, useUpdatePickupRequest, useUpdateRoute, useNotifications } from "@/hooks/useApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import type { PickupRequest, Route as RouteType, CollectionHistory, PaginatedResponse } from "@/lib/types";
 
-// Mock data for assigned pickups
-const mockPickups = [
-  { 
-    id: 1, 
-    address: "123 Green Lane, Sector 5", 
-    resident: "John Doe",
-    phone: "+1 234 567 890",
-    wasteType: "General Waste", 
-    scheduledTime: "08:00 AM",
-    priority: "high",
-    status: "pending",
-    estimatedWeight: "15 kg"
-  },
-  { 
-    id: 2, 
-    address: "456 Eco Street, Sector 7", 
-    resident: "Jane Smith",
-    phone: "+1 234 567 891",
-    wasteType: "Recyclables", 
-    scheduledTime: "09:30 AM",
-    priority: "normal",
-    status: "pending",
-    estimatedWeight: "8 kg"
-  },
-  { 
-    id: 3, 
-    address: "789 Clean Avenue, Sector 3", 
-    resident: "Bob Wilson",
-    phone: "+1 234 567 892",
-    wasteType: "Organic Waste", 
-    scheduledTime: "10:00 AM",
-    priority: "normal",
-    status: "pending",
-    estimatedWeight: "12 kg"
-  },
-  { 
-    id: 4, 
-    address: "321 Waste Road, Sector 2", 
-    resident: "Alice Brown",
-    phone: "+1 234 567 893",
-    wasteType: "E-Waste", 
-    scheduledTime: "11:30 AM",
-    priority: "low",
-    status: "pending",
-    estimatedWeight: "5 kg"
-  },
-];
-
-const mockRoutes = [
-  { id: 1, name: "Sector 5-7 Morning Route", stops: 8, distance: "12.5 km", estimatedTime: "2h 30m", status: "active" },
-  { id: 2, name: "Sector 2-3 Afternoon Route", stops: 6, distance: "8.2 km", estimatedTime: "1h 45m", status: "upcoming" },
-];
-
-const mockHistory = [
-  { id: 1, date: "2026-01-09", pickups: 12, weight: "156 kg", route: "Sector 5-7", duration: "2h 15m" },
-  { id: 2, date: "2026-01-08", pickups: 10, weight: "134 kg", route: "Sector 2-3", duration: "1h 55m" },
-  { id: 3, date: "2026-01-07", pickups: 14, weight: "178 kg", route: "Sector 5-7", duration: "2h 40m" },
-  { id: 4, date: "2026-01-06", pickups: 11, weight: "145 kg", route: "Sector 2-3", duration: "2h 05m" },
-  { id: 5, date: "2026-01-05", pickups: 9, weight: "112 kg", route: "Sector 5-7", duration: "1h 50m" },
-];
+function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
+  if (!data) return [];
+  return Array.isArray(data) ? data : data.results;
+}
 
 const priorityConfig = {
   high: { label: "High", className: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -93,28 +43,112 @@ const wasteTypeIcons: Record<string, string> = {
 };
 
 const CollectorDashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { data: pickupsData, isLoading: pickupsLoading, isError: pickupsError, error: pickupsErr } = useCollectorPickups();
+  const { data: routesData, isLoading: routesLoading, isError: routesError, error: routesErr } = useRoutes();
+  const { data: historyData, isLoading: historyLoading, isError: historyError, error: historyErr } = useCollectionHistory();
+  const updatePickupMutation = useUpdatePickupRequest();
+  const updateRouteMutation = useUpdateRoute();
+  const { data: notifData } = useNotifications();
+  const notifUnread = normalizeList<{ is_read: boolean }>(notifData).filter(n => !n.is_read).length;
+
   const [activeTab, setActiveTab] = useState("overview");
-  const [pickups, setPickups] = useState(mockPickups);
-  const [isRouteActive, setIsRouteActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  
+
+  const pickups = normalizeList<PickupRequest>(pickupsData);
+  const routes = normalizeList<RouteType>(routesData);
+  const history = normalizeList<CollectionHistory>(historyData);
+
+  const isLoading = pickupsLoading || routesLoading || historyLoading;
+  const hasError = pickupsError || routesError || historyError;
+  const errorMsg = pickupsErr?.message || routesErr?.message || historyErr?.message;
+
+  const formatTime = (iso: string) => {
+    try { return format(parseISO(iso), "hh:mm a"); } catch { return iso; }
+  };
+  const formatDate = (iso: string) => {
+    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
+  };
+
+  const getResidentName = (pickup: PickupRequest) => {
+    if (pickup.resident_detail) {
+      const name = [pickup.resident_detail.first_name, pickup.resident_detail.last_name].filter(Boolean).join(" ");
+      return name || pickup.resident_detail.username;
+    }
+    return `User #${pickup.resident}`;
+  };
+
+  const getResidentPhone = (pickup: PickupRequest) => {
+    return pickup.resident_detail?.phone || "—";
+  };
+
   const completedPickups = pickups.filter(p => p.status === "completed").length;
   const pendingPickups = pickups.filter(p => p.status === "pending").length;
-  const progressPercentage = (completedPickups / pickups.length) * 100;
+  const progressPercentage = pickups.length > 0 ? (completedPickups / pickups.length) * 100 : 0;
+
+  const activeRoute = routes.find(r => r.status === "active");
+  const isRouteActive = !!activeRoute;
+
+  const totalDistance = routes.reduce((sum, r) => sum + (r.distance_km || 0), 0);
 
   const stats = [
     { label: "Today's Pickups", value: pickups.length.toString(), icon: Package, color: "text-primary" },
     { label: "Completed", value: completedPickups.toString(), icon: CheckCircle2, color: "text-success" },
     { label: "Pending", value: pendingPickups.toString(), icon: Clock, color: "text-warning" },
-    { label: "Total Distance", value: "20.7 km", icon: Navigation, color: "text-secondary" },
+    { label: "Total Distance", value: `${totalDistance.toFixed(1)} km`, icon: Navigation, color: "text-secondary" },
   ];
 
   const handleCompletePickup = (id: number) => {
-    setPickups(prev => prev.map(p => 
-      p.id === id ? { ...p, status: "completed" } : p
-    ));
+    updatePickupMutation.mutate(
+      { id, data: { status: "completed" } },
+      {
+        onSuccess: () => toast.success("Pickup marked as completed!"),
+        onError: (err: Error) => toast.error(err.message || "Failed to update pickup."),
+      },
+    );
+  };
+
+  const handleStartRoute = () => {
+    const upcoming = routes.find(r => r.status === "upcoming");
+    if (!upcoming) {
+      toast.error("No upcoming routes to start.");
+      return;
+    }
+    updateRouteMutation.mutate(
+      { id: upcoming.id, data: { status: "active" } },
+      {
+        onSuccess: () => toast.success(`Route "${upcoming.name}" started!`),
+        onError: (err: Error) => toast.error(err.message || "Failed to start route."),
+      },
+    );
+  };
+
+  const handlePauseRoute = () => {
+    if (!activeRoute) return;
+    updateRouteMutation.mutate(
+      { id: activeRoute.id, data: { status: "upcoming" } },
+      {
+        onSuccess: () => toast.success(`Route "${activeRoute.name}" paused.`),
+        onError: (err: Error) => toast.error(err.message || "Failed to pause route."),
+      },
+    );
+  };
+
+  const handleRouteCardAction = (route: RouteType) => {
+    if (route.status === "active") {
+      toast.info(`View map for "${route.name}" — coming soon!`);
+    } else {
+      updateRouteMutation.mutate(
+        { id: route.id, data: { status: "active" } },
+        {
+          onSuccess: () => toast.success(`Route "${route.name}" started!`),
+          onError: (err: Error) => toast.error(err.message || "Failed to start route."),
+        },
+      );
+    }
   };
 
   const handleSidebarClick = (tab: string) => {
@@ -161,11 +195,14 @@ const CollectorDashboard = () => {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: "#b8e0d4" }}>
-          <Button variant="ghost" className="w-full justify-start gap-3" asChild style={{ color: "#6B9E8A" }}>
-            <Link to="/">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3"
+            style={{ color: "#6B9E8A" }}
+            onClick={() => { logout(); navigate("/login"); }}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
           </Button>
         </div>
       </aside>
@@ -183,13 +220,13 @@ const CollectorDashboard = () => {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {isRouteActive ? (
-              <Button size="sm" variant="destructive" className="gap-2" onClick={() => setIsRouteActive(false)}>
-                <Pause className="h-4 w-4" />
+              <Button size="sm" variant="destructive" className="gap-2" onClick={handlePauseRoute} disabled={updateRouteMutation.isPending}>
+                {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
                 Pause Route
               </Button>
             ) : (
-              <Button size="sm" className="gap-2 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => setIsRouteActive(true)}>
-                <Play className="h-4 w-4" />
+              <Button size="sm" className="gap-2 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={handleStartRoute} disabled={updateRouteMutation.isPending}>
+                {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 Start Route
               </Button>
             )}
@@ -198,7 +235,7 @@ const CollectorDashboard = () => {
               onClick={() => setNotificationsOpen(true)}
             >
               <Bell className="h-5 w-5" style={{ color: "#D97706" }} />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#1D9E75]" />
+              {notifUnread > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#D97706]" />}
             </button>
             <button
               onClick={() => setProfileOpen(true)}
@@ -207,17 +244,32 @@ const CollectorDashboard = () => {
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
                 <User className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>Mike Johnson</span>
+              <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>{user?.first_name || user?.username || "Collector"}</span>
             </button>
           </div>
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          {/* OVERVIEW TAB */}
-          {activeTab === "overview" && (
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
+            </div>
+          )}
+          {hasError && !isLoading && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="flex items-center gap-3 py-6">
+                <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-red-700">Failed to load data</p>
+                  <p className="text-sm text-red-500">{errorMsg || "Please try again later."}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {!isLoading && activeTab === "overview" && (
             <>
               {/* Welcome Card */}
-              <WelcomeCard userName="Mike" />
+              <WelcomeCard userName={user?.first_name || user?.username || "Collector"} />
 
               {/* Stats Grid */}
               <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
@@ -246,7 +298,7 @@ const CollectorDashboard = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-sm sm:text-base text-success">Route Active</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">Sector 5-7 Morning Route</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{activeRoute?.name || "Active Route"}</p>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
@@ -287,11 +339,11 @@ const CollectorDashboard = () => {
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
                         <div className="flex items-start gap-3 sm:gap-4 flex-1">
                           <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center text-xl sm:text-2xl shrink-0" style={{ color: "#1D9E75" }}>
-                            {wasteTypeIcons[pickup.wasteType] || ""}
+                            {wasteTypeIcons[pickup.waste_type] || ""}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{pickup.wasteType}</p>
+                              <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{pickup.waste_type}</p>
                               <Badge variant="outline" className={priorityConfig[pickup.priority as keyof typeof priorityConfig].className}>
                                 {priorityConfig[pickup.priority as keyof typeof priorityConfig].label}
                               </Badge>
@@ -309,15 +361,15 @@ const CollectorDashboard = () => {
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
                                 <User className="h-3.5 w-3.5 shrink-0" />
-                                <span className="truncate">{pickup.resident}</span>
+                                <span className="truncate">{getResidentName(pickup)}</span>
                               </span>
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
                                 <Clock className="h-3.5 w-3.5 shrink-0" />
-                                {pickup.scheduledTime}
+                                {formatTime(pickup.scheduled_datetime)}
                               </span>
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
                                 <Package className="h-3.5 w-3.5 shrink-0" />
-                                ~{pickup.estimatedWeight}
+                                ~{pickup.estimated_weight_kg ? `${pickup.estimated_weight_kg} kg` : "—"}
                               </span>
                             </div>
                           </div>
@@ -349,7 +401,7 @@ const CollectorDashboard = () => {
           )}
 
           {/* ROUTE MANAGEMENT TAB */}
-          {activeTab === "routes" && (
+          {!isLoading && activeTab === "routes" && (
             <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
               <CardHeader className="pb-3 sm:pb-6">
                 <div className="flex items-center justify-between">
@@ -362,13 +414,12 @@ const CollectorDashboard = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                {mockRoutes.map((route) => (
+              <CardContent className="space-y-3 sm:space-y-4">                {routes.map((route) => (
                   <div 
                     key={route.id} 
                     className={`p-3 sm:p-5 rounded-xl border transition-all ${
-                      route.status === "active" 
-                        ? "border-[#b8e0d4]" 
+                      route.status === "active"
+                        ? "border-[#b8e0d4]"
                         : "bg-[#E1F5EE]/50 hover:border-primary/30"
                     }`}
                     style={route.status === "active" ? { backgroundColor: "#E1F5EE", borderColor: "#b8e0d4" } : undefined}
@@ -388,31 +439,40 @@ const CollectorDashboard = () => {
                           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm" style={{ color: "#444441" }}>
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3.5 w-3.5 shrink-0" />
-                              {route.stops} stops
+                              {route.stops_count} stops
                             </span>
                             <span className="flex items-center gap-1">
                               <Navigation className="h-3.5 w-3.5 shrink-0" />
-                              {route.distance}
+                              {route.distance_km ? `${route.distance_km} km` : "—"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Timer className="h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
-                              {route.estimatedTime}
+                              {route.estimated_duration || "—"}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <Button variant={route.status === "active" ? "secondary" : "outline"} size="sm" className={`w-full sm:w-auto ${route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}`}>
+                      <Button
+                        variant={route.status === "active" ? "secondary" : "outline"}
+                        size="sm"
+                        className={`w-full sm:w-auto ${route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}`}
+                        onClick={() => handleRouteCardAction(route)}
+                        disabled={updateRouteMutation.isPending}
+                      >
                         {route.status === "active" ? "View Map" : "Start Route"}
                       </Button>
                     </div>
                   </div>
                 ))}
+                {routes.length === 0 && (
+                  <p className="text-center py-8" style={{ color: "#444441" }}>No routes assigned.</p>
+                )}
               </CardContent>
             </Card>
           )}
 
           {/* COLLECTION HISTORY TAB */}
-          {activeTab === "history" && (
+          {!isLoading && activeTab === "history" && (
             <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -438,42 +498,45 @@ const CollectorDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockHistory.map((record) => (
+                      {history.map((record) => (
                         <tr key={record.id} className="border-b hover:bg-[#E1F5EE] transition-colors" style={{ borderColor: "#b8e0d4" }}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" style={{ color: "#7C3AED" }} />
-                              <span className="font-medium" style={{ color: "#0F6E56" }}>{record.date}</span>
+                              <span className="font-medium" style={{ color: "#0F6E56" }}>{formatDate(record.completed_at)}</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.route}</td>
+                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.route ? `Route #${record.route}` : "—"}</td>
                           <td className="py-3 px-4">
-                            <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">{record.pickups} pickups</Badge>
+                            <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">1 pickup</Badge>
                           </td>
-                          <td className="py-3 px-4 font-medium" style={{ color: "#0F6E56" }}>{record.weight}</td>
-                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.duration}</td>
+                          <td className="py-3 px-4 font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "—"}</td>
+                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.duration || "—"}</td>
                         </tr>
                       ))}
+                      {history.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-8" style={{ color: "#444441" }}>No collection history yet.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
                {/* Mobile Cards */}
                 <div className="space-y-3 sm:hidden">
-                  {mockHistory.map((record) => (
+                  {history.map((record) => (
                     <div key={record.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" style={{ color: "#7C3AED" }} />
-                          <span className="font-medium text-sm" style={{ color: "#0F6E56" }}>{record.date}</span>
+                          <span className="font-medium text-sm" style={{ color: "#0F6E56" }}>{formatDate(record.completed_at)}</span>
                         </div>
-                        <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56] text-xs">{record.pickups} pickups</Badge>
+                        <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56] text-xs">1 pickup</Badge>
                       </div>
                       <div className="flex items-center justify-between mt-2 text-xs" style={{ color: "#444441" }}>
-                        <span>Route: {record.route}</span>
-                        <span className="font-medium" style={{ color: "#0F6E56" }}>{record.weight}</span>
+                        <span>Route: {record.route ? `#${record.route}` : "—"}</span>
+                        <span className="font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "—"}</span>
                       </div>
-                      <div className="text-xs mt-1" style={{ color: "#444441" }}>Duration: {record.duration}</div>
+                      <div className="text-xs mt-1" style={{ color: "#444441" }}>Duration: {record.duration || "—"}</div>
                     </div>
                   ))}
                 </div>
@@ -558,8 +621,10 @@ const CollectorDashboard = () => {
               <User className="h-10 w-10 text-white" />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>Mike Johnson</h3>
-              <p className="text-sm" style={{ color: "#444441" }}>mike.johnson@example.com</p>
+              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.first_name || user?.username || "Collector"}
+              </h3>
+              <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
               <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
             </div>
           </div>
@@ -567,19 +632,21 @@ const CollectorDashboard = () => {
           <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>+254 700 987 654</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Zone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>Sector 5-7</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.zone || "—"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>January 2026</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>
+                {user?.date_joined ? (() => { try { return format(parseISO(user.date_joined), "MMMM yyyy"); } catch { return user.date_joined; } })() : "—"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Total Collections</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>248</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{history.length}</span>
             </div>
           </div>
         </div>

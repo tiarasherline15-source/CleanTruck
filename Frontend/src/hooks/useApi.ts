@@ -9,12 +9,12 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 
-// ─── Pickup Requests ─────────────────────────────────────────────────────────
+//  Pickup Requests 
 export function usePickupRequests() {
   return useQuery({
     queryKey: ["pickup-requests"],
     queryFn: () =>
-      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/"),
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickups/"),
   });
 }
 
@@ -22,7 +22,7 @@ export function useMyPickupRequests() {
   return useQuery({
     queryKey: ["my-pickup-requests"],
     queryFn: () =>
-      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/my/"),
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickups/my/"),
   });
 }
 
@@ -30,7 +30,7 @@ export function useCreatePickupRequest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<PickupRequest>) =>
-      api.post<PickupRequest>("/pickup-requests/", data),
+      api.post<PickupRequest>("/pickups/", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pickup-requests"] });
       qc.invalidateQueries({ queryKey: ["my-pickup-requests"] });
@@ -42,7 +42,7 @@ export function useUpdatePickupRequest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<PickupRequest> }) =>
-      api.patch<PickupRequest>(`/pickup-requests/${id}/`, data),
+      api.patch<PickupRequest>(`/pickups/${id}/`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pickup-requests"] });
       qc.invalidateQueries({ queryKey: ["my-pickup-requests"] });
@@ -54,11 +54,11 @@ export function useCollectorPickups() {
   return useQuery({
     queryKey: ["collector-pickups"],
     queryFn: () =>
-      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickup-requests/assigned/"),
+      api.get<PaginatedResponse<PickupRequest> | PickupRequest[]>("/pickups/assigned/"),
   });
 }
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
+// Routes 
 export function useRoutes() {
   return useQuery({
     queryKey: ["routes"],
@@ -67,7 +67,18 @@ export function useRoutes() {
   });
 }
 
-// ─── Users (Admin) ───────────────────────────────────────────────────────────
+export function useUpdateRoute() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Route> }) =>
+      api.patch<Route>(`/routes/${id}/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["routes"] });
+    },
+  });
+}
+
+// Users (Admin)
 export function useUsers(params?: { search?: string; role?: string; page?: number }) {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.set("search", params.search);
@@ -82,7 +93,7 @@ export function useUsers(params?: { search?: string; role?: string; page?: numbe
   });
 }
 
-// ─── Notifications ───────────────────────────────────────────────────────────
+// Notifications
 export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
@@ -109,7 +120,7 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
-// ─── Collection History ──────────────────────────────────────────────────────
+// Collection History 
 export function useCollectionHistory() {
   return useQuery({
     queryKey: ["collection-history"],
@@ -118,7 +129,7 @@ export function useCollectionHistory() {
   });
 }
 
-// ─── Admin Analytics ─────────────────────────────────────────────────────────
+//  Admin Analytics 
 export function useAnalytics() {
   return useQuery({
     queryKey: ["analytics"],
@@ -126,7 +137,7 @@ export function useAnalytics() {
   });
 }
 
-// ─── Reports ─────────────────────────────────────────────────────────────────
+//  Reports
 export function useReports() {
   return useQuery({
     queryKey: ["reports"],

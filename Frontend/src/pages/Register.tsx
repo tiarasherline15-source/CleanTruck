@@ -1,13 +1,23 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Lock, User, Phone, MapPin, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, Phone, MapPin, ArrowLeft, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+const roleRedirect: Record<string, string> = {
+  resident: "/dashboard",
+  collector: "/collector",
+  admin: "/admin",
+};
 
 const Register = () => {
+  const { register } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,13 +27,46 @@ const Register = () => {
     password: "",
     confirmPassword: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const nameParts = formData.name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      await register({
+        username: formData.email,
+        email: formData.email,
+        password: formData.password,
+        first_name: firstName,
+        last_name: lastName,
+        phone: formData.phone,
+        address: formData.address,
+        zone: formData.zone,
+        role: "resident",
+      });
+      // After auto-login, navigate to resident dashboard
+      const stored = localStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
+      const redirectPath = roleRedirect[user?.role] || "/dashboard";
+      toast.success("Account created successfully!");
+      navigate(redirectPath, { replace: true });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -140,6 +183,7 @@ const Register = () => {
                     <SelectItem value="langata">Lang'ata</SelectItem>
                     <SelectItem value="upperhill">Upper Hill</SelectItem>
                     <SelectItem value="cbd">CBD</SelectItem>
+                    <SelectItem value="riruta">Riruta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -184,8 +228,15 @@ const Register = () => {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
-                Create Account
+              <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating account...
+                  </span>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{" "}

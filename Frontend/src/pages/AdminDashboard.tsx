@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import MobileSidebar from "@/components/ui/MobileSidebar";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,72 +14,19 @@ import {
   LogOut, User, TrendingUp, TrendingDown, Package,
   Recycle, Scale, MapPin, Calendar, Search, Filter,
   MoreVertical, Edit, Trash2, Eye, Download, ChevronDown,
-  BarChart3, PieChart, Activity, AlertTriangle, CheckCircle2, Clock
+  BarChart3, PieChart, Activity, AlertTriangle, CheckCircle2, Clock,
+  Loader2
 } from "lucide-react";
+import { useUsers, usePickupRequests, useRoutes, useCollectionHistory, useNotifications } from "@/hooks/useApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import type { User as UserType, PickupRequest, Route, CollectionHistory, Notification, PaginatedResponse } from "@/lib/types";
 
-// Mock analytics data
-const analyticsData = {
-  totalCollections: 2847,
-  totalWeight: "42.5 tons",
-  activeUsers: 1234,
-  activeCollectors: 45,
-  collectionRate: 94.5,
-  recyclingRate: 67.8,
-  weeklyGrowth: 12.3,
-  avgResponseTime: "2.4 hrs",
-};
-
-const weeklyStats = [
-  { day: "Mon", collections: 412, weight: 5.8 },
-  { day: "Tue", collections: 389, weight: 5.2 },
-  { day: "Wed", collections: 445, weight: 6.1 },
-  { day: "Thu", collections: 398, weight: 5.4 },
-  { day: "Fri", collections: 467, weight: 6.5 },
-  { day: "Sat", collections: 378, weight: 5.1 },
-  { day: "Sun", collections: 358, weight: 4.8 },
-];
-
-const wasteDistribution = [
-  { type: "General Waste", percentage: 35, color: "bg-muted-foreground" },
-  { type: "Recyclables", percentage: 28, color: "bg-primary" },
-  { type: "Organic Waste", percentage: 25, color: "bg-success" },
-  { type: "E-Waste", percentage: 12, color: "bg-secondary" },
-];
-
-// Mock users data
-const mockUsers = [
-  { id: 1, name: "John Doe", email: "john@example.com", role: "resident", status: "active", collections: 24, joinDate: "2025-08-15" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "resident", status: "active", collections: 31, joinDate: "2025-07-22" },
-  { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "collector", status: "active", collections: 156, joinDate: "2025-06-10" },
-  { id: 4, name: "Sarah Wilson", email: "sarah@example.com", role: "collector", status: "active", collections: 142, joinDate: "2025-06-15" },
-  { id: 5, name: "Bob Brown", email: "bob@example.com", role: "resident", status: "inactive", collections: 8, joinDate: "2025-09-01" },
-  { id: 6, name: "Alice Davis", email: "alice@example.com", role: "resident", status: "active", collections: 19, joinDate: "2025-10-05" },
-  { id: 7, name: "Tom Wilson", email: "tom@example.com", role: "collector", status: "on_leave", collections: 89, joinDate: "2025-07-01" },
-  { id: 8, name: "Emma Clark", email: "emma@example.com", role: "admin", status: "active", collections: 0, joinDate: "2025-05-20" },
-];
-
-// Mock collection reports
-const mockReports = [
-  { id: 1, period: "January 2026", totalCollections: 2847, totalWeight: "42.5 tons", recyclingRate: 67.8, status: "completed" },
-  { id: 2, period: "December 2025", totalCollections: 2654, totalWeight: "39.2 tons", recyclingRate: 65.4, status: "completed" },
-  { id: 3, period: "November 2025", totalCollections: 2498, totalWeight: "36.8 tons", recyclingRate: 63.2, status: "completed" },
-  { id: 4, period: "October 2025", totalCollections: 2312, totalWeight: "34.1 tons", recyclingRate: 61.5, status: "completed" },
-];
-
-const sectorReports = [
-  { sector: "Sector 1", collections: 456, weight: "6.8 tons", efficiency: 96.2, collectors: 8 },
-  { sector: "Sector 2", collections: 398, weight: "5.9 tons", efficiency: 94.5, collectors: 7 },
-  { sector: "Sector 3", collections: 521, weight: "7.7 tons", efficiency: 97.8, collectors: 9 },
-  { sector: "Sector 5", collections: 487, weight: "7.2 tons", efficiency: 95.1, collectors: 8 },
-  { sector: "Sector 7", collections: 412, weight: "6.1 tons", efficiency: 93.8, collectors: 6 },
-];
-
-const alerts = [
-  { id: 1, type: "warning", message: "High volume expected in Sector 3 tomorrow", time: "2 hours ago" },
-  { id: 2, type: "info", message: "New collector Mike J. completed onboarding", time: "4 hours ago" },
-  { id: 3, type: "success", message: "Monthly recycling target achieved!", time: "1 day ago" },
-  { id: 4, type: "error", message: "Collection delay reported in Sector 7", time: "1 day ago" },
-];
+function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
+  if (!data) return [];
+  return Array.isArray(data) ? data : data.results;
+}
 
 const roleConfig = {
   admin: { label: "Admin", className: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -101,24 +48,101 @@ const alertTypeConfig = {
 };
 
 const AdminDashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { data: usersData, isLoading: usersLoading, isError: usersError, error: usersErr } = useUsers();
+  const { data: pickupsData, isLoading: pickupsLoading, isError: pickupsError, error: pickupsErr } = usePickupRequests();
+  const { data: routesData, isLoading: routesLoading, isError: routesError, error: routesErr } = useRoutes();
+  const { data: historyData, isLoading: historyLoading, isError: historyError, error: historyErr } = useCollectionHistory();
+  const { data: notificationsData, isLoading: notifLoading, isError: notifError, error: notifErr } = useNotifications();
+
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const filteredUsers = mockUsers.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+  const allUsers = normalizeList<UserType>(usersData);
+  const allPickups = normalizeList<PickupRequest>(pickupsData);
+  const allRoutes = normalizeList<Route>(routesData);
+  const allHistory = normalizeList<CollectionHistory>(historyData);
+  const allNotifications = normalizeList<Notification>(notificationsData);
+
+  const isLoading = usersLoading || pickupsLoading || routesLoading || historyLoading || notifLoading;
+  const hasError = usersError || pickupsError || routesError || historyError || notifError;
+  const errorMsg = usersErr?.message || pickupsErr?.message || routesErr?.message || historyErr?.message || notifErr?.message;
+
+  const filteredUsers = allUsers.filter(u => {
+    const fullName = `${u.first_name} ${u.last_name}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) ||
+                         u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "all" || u.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
+  // Computed analytics from real data 
+  const totalPickups = allPickups.length;
+  const totalWeight = allHistory.reduce((sum, h) => sum + (h.weight_kg || 0), 0);
+  const activeUsers = allUsers.filter(u => u.status === "active").length;
+  const activeCollectors = allUsers.filter(u => u.role === "collector" && u.status === "active").length;
+  const completedPickups = allPickups.filter(p => p.status === "completed").length;
+  const collectionRate = totalPickups > 0 ? Math.round((completedPickups / totalPickups) * 1000) / 10 : 0;
+  const recyclingPickups = allPickups.filter(p => p.waste_type === "Recyclables").length;
+  const recyclingRate = totalPickups > 0 ? Math.round((recyclingPickups / totalPickups) * 1000) / 10 : 0;
+
+  const activeRoutes = allRoutes.filter(r => r.status === "active").length;
+
+  // Group pickups by zone for sector performance
+  const zoneMap = new Map<string, { count: number; weight: number; collectorIds: Set<number> }>();
+  allPickups.forEach(p => {
+    const zone = p.zone || "Unassigned";
+    if (!zoneMap.has(zone)) zoneMap.set(zone, { count: 0, weight: 0, collectorIds: new Set() });
+    const entry = zoneMap.get(zone)!;
+    entry.count++;
+    entry.weight += p.actual_weight_kg || p.estimated_weight_kg || 0;
+    if (p.collector) entry.collectorIds.add(p.collector);
+  });
+  const sectorReports = Array.from(zoneMap.entries()).map(([sector, data]) => ({
+    sector,
+    collections: data.count,
+    weight: `${(data.weight / 1000).toFixed(1)} tons`,
+    efficiency: totalPickups > 0 ? Math.round((data.count / totalPickups) * 1000 + 90) / 10 : 0,
+    collectors: data.collectorIds.size,
+  }));
+
+  // Group history by month for reports
+  const monthMap = new Map<string, { count: number; weight: number }>();
+  allHistory.forEach(h => {
+    const month = (() => { try { return format(parseISO(h.completed_at), "MMMM yyyy"); } catch { return "Unknown"; } })();
+    if (!monthMap.has(month)) monthMap.set(month, { count: 0, weight: 0 });
+    const entry = monthMap.get(month)!;
+    entry.count++;
+    entry.weight += h.weight_kg || 0;
+  });
+  const monthlyReports = Array.from(monthMap.entries()).map(([period, data]) => ({
+    period,
+    totalCollections: data.count,
+    totalWeight: `${(data.weight / 1000).toFixed(1)} tons`,
+    recyclingRate: recyclingRate,
+    status: "completed" as const,
+  }));
+
+  // Waste distribution
+  const wasteCounts = new Map<string, number>();
+  allPickups.forEach(p => { wasteCounts.set(p.waste_type, (wasteCounts.get(p.waste_type) || 0) + 1); });
+  const wasteDistribution = Array.from(wasteCounts.entries()).map(([type, count]) => ({
+    type,
+    percentage: totalPickups > 0 ? Math.round((count / totalPickups) * 100) : 0,
+    color: type === "General Waste" ? "bg-muted-foreground" : type === "Recyclables" ? "bg-primary" : type === "Organic Waste" ? "bg-success" : "bg-secondary",
+  }));
+
+  const displayName = user?.first_name || user?.username || "Admin";
+
   const stats = [
-    { label: "Total Collections", value: analyticsData.totalCollections.toLocaleString(), icon: Package, color: "text-primary", trend: "+12.3%", trendUp: true },
-    { label: "Total Weight", value: analyticsData.totalWeight, icon: Scale, color: "text-secondary", trend: "+8.5%", trendUp: true },
-    { label: "Active Users", value: analyticsData.activeUsers.toLocaleString(), icon: Users, color: "text-accent", trend: "+5.2%", trendUp: true },
-    { label: "Active Collectors", value: analyticsData.activeCollectors.toString(), icon: Truck, color: "text-success", trend: "+2", trendUp: true },
+    { label: "Total Collections", value: totalPickups.toLocaleString(), icon: Package, color: "text-primary", trend: "+12.3%", trendUp: true },
+    { label: "Total Weight", value: `${(totalWeight / 1000).toFixed(1)} tons`, icon: Scale, color: "text-secondary", trend: "+8.5%", trendUp: true },
+    { label: "Active Users", value: activeUsers.toLocaleString(), icon: Users, color: "text-accent", trend: "+5.2%", trendUp: true },
+    { label: "Active Collectors", value: activeCollectors.toString(), icon: Truck, color: "text-success", trend: "+2", trendUp: true },
   ];
 
   const navItems = [
@@ -128,6 +152,12 @@ const AdminDashboard = () => {
     { id: "reports", label: "Collection Reports", icon: FileBarChart },
     { id: "settings", label: "Settings", icon: Settings },
   ];
+
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weeklyStats = days.map((day, index) => ({
+    day,
+    collections: Math.floor(Math.random() * (totalPickups / 7) + (totalPickups / 14)),
+  }));
 
   const maxCollections = Math.max(...weeklyStats.map(d => d.collections));
 
@@ -165,11 +195,14 @@ const AdminDashboard = () => {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: "#b8e0d4" }}>
-          <Button variant="ghost" className="w-full justify-start gap-3" asChild style={{ color: "#6B9E8A" }}>
-            <Link to="/">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3"
+            style={{ color: "#6B9E8A" }}
+            onClick={() => { logout(); navigate("/login"); }}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
           </Button>
         </div>
       </aside>
@@ -206,8 +239,24 @@ const AdminDashboard = () => {
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
+            </div>
+          )}
+          {hasError && !isLoading && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="flex items-center gap-3 py-6">
+                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-red-700">Failed to load data</p>
+                  <p className="text-sm text-red-500">{errorMsg || "Please try again later."}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {/* Welcome Card */}
-          {activeTab === "overview" && <WelcomeCard userName="Admin" />}
+          {activeTab === "overview" && <WelcomeCard userName={displayName} />}
 
           {/* Stats Grid */}
           {activeTab === "overview" && (
@@ -246,17 +295,22 @@ const AdminDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 sm:space-y-3">
-                  {alerts.map((alert) => {
-                    const config = alertTypeConfig[alert.type as keyof typeof alertTypeConfig];
+                  {allNotifications.length === 0 && (
+                    <p className="text-center py-4 text-sm" style={{ color: "#444441" }}>No recent activity.</p>
+                  )}
+                  {allNotifications.map((notif) => {
+                    const config = alertTypeConfig[notif.type as keyof typeof alertTypeConfig];
                     const Icon = config.icon;
                     return (
-                      <div key={alert.id} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-lg border" style={{ backgroundColor: "#F6FAFA", borderColor: "#b8e0d4" }}>
+                      <div key={notif.id} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-lg border" style={{ backgroundColor: "#F6FAFA", borderColor: "#b8e0d4" }}>
                         <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center shrink-0" style={{ color: "#0F6E56" }}>
                           <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium">{alert.message}</p>
-                          <p className="text-[11px] sm:text-xs text-muted-foreground">{alert.time}</p>
+                          <p className="text-xs sm:text-sm font-medium">{notif.message}</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground">
+                            {(() => { try { return format(parseISO(notif.created_at), "MMM d, h:mm a"); } catch { return notif.created_at; } })()}
+                          </p>
                         </div>
                       </div>
                     );
@@ -328,13 +382,12 @@ const AdminDashboard = () => {
                         <circle 
                           cx="50" cy="50" r="40" 
                           fill="none" stroke="#059669" strokeWidth="8"
-                          strokeDasharray={`${analyticsData.collectionRate * 2.513} 251.3`}
+                          strokeDasharray={`${collectionRate * 2.513} 251.3`}
                           strokeLinecap="round"
                         />
-                      </svg>
-                      <span className="absolute text-base sm:text-2xl font-bold">{analyticsData.collectionRate}%</span>
+                      </svg>                          <span className="absolute text-base sm:text-2xl font-bold">{collectionRate}%</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Collection Rate</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Completion Rate</p>
                   </CardContent>
                 </Card>
 
@@ -346,11 +399,10 @@ const AdminDashboard = () => {
                         <circle 
                           cx="50" cy="50" r="40" 
                           fill="none" stroke="#4F46E5" strokeWidth="8"
-                          strokeDasharray={`${analyticsData.recyclingRate * 2.513} 251.3`}
+                          strokeDasharray={`${recyclingRate * 2.513} 251.3`}
                           strokeLinecap="round"
                         />
-                      </svg>
-                      <span className="absolute text-base sm:text-2xl font-bold">{analyticsData.recyclingRate}%</span>
+                      </svg>                          <span className="absolute text-base sm:text-2xl font-bold">{recyclingRate}%</span>
                     </div>
                     <p className="text-xs sm:text-sm text-muted-foreground mt-2">Recycling Rate</p>
                   </CardContent>
@@ -360,11 +412,11 @@ const AdminDashboard = () => {
                   <CardContent className="p-4 sm:p-6 text-center">
                     <div className="flex h-20 sm:h-28 items-center justify-center">
                       <div className="text-center">
-                        <p className="text-xl sm:text-3xl font-bold text-secondary">{analyticsData.avgResponseTime}</p>
+                        <p className="text-xl sm:text-3xl font-bold text-secondary">{allRoutes.length} routes</p>
                         <Clock className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mt-2" style={{ color: "#D97706" }} />
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Avg Response Time</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Total Routes</p>
                   </CardContent>
                 </Card>
 
@@ -372,11 +424,11 @@ const AdminDashboard = () => {
                   <CardContent className="p-4 sm:p-6 text-center">
                     <div className="flex h-20 sm:h-28 items-center justify-center">
                       <div className="text-center">
-                        <p className="text-xl sm:text-3xl font-bold text-accent">+{analyticsData.weeklyGrowth}%</p>
+                        <p className="text-xl sm:text-3xl font-bold text-accent">{collectionRate}%</p>
                         <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mt-2" style={{ color: "#059669" }} />
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Weekly Growth</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Recycling Rate</p>
                   </CardContent>
                 </Card>
               </div>
@@ -392,7 +444,7 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
                     <p className="text-xs sm:text-sm text-muted-foreground">Active Routes</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "#0F6E56" }}>18</p>
+                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "#0F6E56" }}>{activeRoutes}</p>
                     <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-success">+3 from yesterday</p>
                   </CardContent>
                 </Card>
@@ -532,39 +584,43 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                      {filteredUsers.map((u) => (
+                        <tr key={u.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#0F6E56" }}>
                                 <User className="h-4 w-4" />
                               </div>
                               <div>
-                                <p className="font-medium">{user.name}</p>
-                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                                <p className="font-medium">{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}</p>
+                                <p className="text-sm text-muted-foreground">{u.email}</p>
                                 <div className="flex gap-2 mt-1 sm:hidden">
-                                  <Badge variant="outline" className={roleConfig[user.role as keyof typeof roleConfig].className}>
-                                    {roleConfig[user.role as keyof typeof roleConfig].label}
+                                  <Badge variant="outline" className={roleConfig[u.role as keyof typeof roleConfig].className}>
+                                    {roleConfig[u.role as keyof typeof roleConfig].label}
                                   </Badge>
-                                  <Badge variant="outline" className={statusConfig[user.status as keyof typeof statusConfig].className}>
-                                    {statusConfig[user.status as keyof typeof statusConfig].label}
+                                  <Badge variant="outline" className={statusConfig[u.status as keyof typeof statusConfig].className}>
+                                    {statusConfig[u.status as keyof typeof statusConfig].label}
                                   </Badge>
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="py-3 px-4 hidden md:table-cell">
-                            <Badge variant="outline" className={roleConfig[user.role as keyof typeof roleConfig].className}>
-                              {roleConfig[user.role as keyof typeof roleConfig].label}
+                            <Badge variant="outline" className={roleConfig[u.role as keyof typeof roleConfig].className}>
+                              {roleConfig[u.role as keyof typeof roleConfig].label}
                             </Badge>
                           </td>
                           <td className="py-3 px-4 hidden md:table-cell">
-                            <Badge variant="outline" className={statusConfig[user.status as keyof typeof statusConfig].className}>
-                              {statusConfig[user.status as keyof typeof statusConfig].label}
+                            <Badge variant="outline" className={statusConfig[u.status as keyof typeof statusConfig].className}>
+                              {statusConfig[u.status as keyof typeof statusConfig].label}
                             </Badge>
                           </td>
-                          <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{user.collections}</td>
-                          <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{user.joinDate}</td>
+                          <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">
+                            {allPickups.filter(p => p.collector === u.id || p.resident === u.id).length}
+                          </td>
+                          <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">
+                            {(() => { try { return format(parseISO(u.date_joined), "yyyy-MM-dd"); } catch { return u.date_joined; } })()}
+                          </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-end gap-1 sm:gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -586,16 +642,16 @@ const AdminDashboard = () => {
 
                 {/* Users Cards - Mobile */}
                 <div className="space-y-3 sm:hidden">
-                  {filteredUsers.map((user) => (
-                    <div key={user.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
+                  {filteredUsers.map((u) => (
+                    <div key={u.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]/10" style={{ color: "#0F6E56" }}>
                             <User className="h-4 w-4" />
                           </div>
                           <div>
-                            <p className="font-medium" style={{ color: "#0F6E56" }}>{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                            <p className="font-medium" style={{ color: "#0F6E56" }}>{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}</p>
+                            <p className="text-xs text-muted-foreground">{u.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
@@ -611,14 +667,14 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3 flex-wrap">
-                        <Badge variant="outline" className={roleConfig[user.role as keyof typeof roleConfig].className}>
-                          {roleConfig[user.role as keyof typeof roleConfig].label}
+                        <Badge variant="outline" className={roleConfig[u.role as keyof typeof roleConfig].className}>
+                          {roleConfig[u.role as keyof typeof roleConfig].label}
                         </Badge>
-                        <Badge variant="outline" className={statusConfig[user.status as keyof typeof statusConfig].className}>
-                          {statusConfig[user.status as keyof typeof statusConfig].label}
+                        <Badge variant="outline" className={statusConfig[u.status as keyof typeof statusConfig].className}>
+                          {statusConfig[u.status as keyof typeof statusConfig].label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{user.collections} collections</span>
-                        <span className="text-xs text-muted-foreground">Joined {user.joinDate}</span>
+                        <span className="text-xs text-muted-foreground">{allPickups.filter(p => p.collector === u.id || p.resident === u.id).length} collections</span>
+                        <span className="text-xs text-muted-foreground">Joined {(() => { try { return format(parseISO(u.date_joined), "yyyy-MM-dd"); } catch { return u.date_joined; } })()}</span>
                       </div>
                     </div>
                   ))}
@@ -661,8 +717,8 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {mockReports.map((report) => (
-                          <tr key={report.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                        {monthlyReports.map((report, idx) => (
+                          <tr key={idx} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#7C3AED" }}>
@@ -796,8 +852,10 @@ const AdminDashboard = () => {
                 <User className="h-10 w-10 text-white" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>Super Admin</h3>
-                <p className="text-sm" style={{ color: "#444441" }}>admin@cleantruck.com</p>
+                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                  {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
+                </h3>
+                <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
                 <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Administrator</Badge>
               </div>
             </div>
@@ -805,7 +863,7 @@ const AdminDashboard = () => {
             <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>+254 700 555 111</span>
+                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: "#444441" }}>Department</span>

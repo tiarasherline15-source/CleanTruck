@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import MobileSidebar from "@/components/ui/MobileSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,21 +14,21 @@ import DashboardDialog from "@/components/ui/DashboardDialog";
 import {
   Calendar, Truck, Clock, Plus,
   CheckCircle2, AlertCircle, XCircle, LogOut, User,
-  Home, FileText, Settings, Bell, ChevronRight, Send, MapPin, Tag, MapPinned, StickyNote, Trash2
+  Home, FileText, Settings, Bell, ChevronRight, Send, MapPin, Tag, MapPinned, StickyNote, Trash2,
+  Loader2
 } from "lucide-react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
+import { useMyPickupRequests, useCreatePickupRequest, useNotifications } from "@/hooks/useApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import type { PickupRequest, PaginatedResponse } from "@/lib/types";
 
-// Mock data for demonstration
-const mockRequests = [
-  { id: 1, date: "2026-01-10", time: "08:00 AM", wasteType: "General Waste", status: "pending", address: "123 Main St" },
-  { id: 2, date: "2026-01-08", time: "10:00 AM", wasteType: "Recyclables", status: "completed", address: "123 Main St" },
-  { id: 3, date: "2026-01-06", time: "09:00 AM", wasteType: "Organic Waste", status: "in_progress", address: "123 Main St" },
-  { id: 4, date: "2026-01-03", time: "11:00 AM", wasteType: "General Waste", status: "completed", address: "456 Oak Ave" },
-  { id: 5, date: "2026-01-01", time: "07:30 AM", wasteType: "E-Waste", status: "completed", address: "123 Main St" },
-  { id: 6, date: "2025-12-28", time: "02:00 PM", wasteType: "Recyclables", status: "pending", address: "789 Pine Rd" },
-  { id: 7, date: "2025-12-25", time: "09:00 AM", wasteType: "Organic Waste", status: "in_progress", address: "123 Main St" },
-];
+function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
+  if (!data) return [];
+  return Array.isArray(data) ? data : data.results;
+}
 
 const statusConfig = {
   pending: { label: "Pending", icon: Clock, variant: "secondary" as const },
@@ -38,6 +38,13 @@ const statusConfig = {
 };
 
 const Dashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { data: pickupData, isLoading, isError, error } = useMyPickupRequests();
+  const createPickup = useCreatePickupRequest();
+  const { data: notifData } = useNotifications();
+  const notifUnread = normalizeList<{ is_read: boolean }>(notifData).filter(n => !n.is_read).length;
+
   const [activeTab, setActiveTab] = useState("overview");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [viewAllOpen, setViewAllOpen] = useState(false);
@@ -45,20 +52,41 @@ const Dashboard = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  // Schedule Pickup form state
+  const [scheduleForm, setScheduleForm] = useState({
+    waste_type: "",
+    date: "",
+    time: "",
+    address: "",
+    notes: "",
+  });
+
+  const handleScheduleChange = (field: string, value: string) => {
+    setScheduleForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const requests = normalizeList<PickupRequest>(pickupData);
+
+  const formatDate = (iso: string) => {
+    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
+  };
+  const formatTime = (iso: string) => {
+    try { return format(parseISO(iso), "hh:mm a"); } catch { return ""; }
+  };
+
+  const completedRequests = requests.filter((r) => r.status === "completed");
+  const pendingRequests = requests.filter((r) => r.status === "pending");
+  const inProgressRequests = requests.filter((r) => r.status === "in_progress");
+
+  const nextPickup = [...pendingRequests]
+    .sort((a, b) => a.scheduled_datetime.localeCompare(b.scheduled_datetime))[0];
+
   const stats = [
-    { label: "Total Requests", value: "12", icon: FileText, color: "text-primary" },
-    { label: "Pending", value: "2", icon: Clock, color: "text-warning" },
-    { label: "Completed", value: "9", icon: CheckCircle2, color: "text-success" },
-    { label: "This Month", value: "4", icon: Calendar, color: "text-secondary" },
+    { label: "Total Requests", value: requests.length.toString(), icon: FileText, color: "text-primary" },
+    { label: "Pending", value: pendingRequests.length.toString(), icon: Clock, color: "text-warning" },
+    { label: "Completed", value: completedRequests.length.toString(), icon: CheckCircle2, color: "text-success" },
+    { label: "In Progress", value: inProgressRequests.length.toString(), icon: Calendar, color: "text-secondary" },
   ];
-
-  const completedRequests = mockRequests.filter((r) => r.status === "completed");
-  const pendingRequests = mockRequests.filter((r) => r.status === "pending");
-  const inProgressRequests = mockRequests.filter((r) => r.status === "in_progress");
-
-  const nextPickup = [...mockRequests]
-    .filter((r) => r.status === "pending")
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const navItems = [
     { id: "overview", label: "Overview", icon: Home },
@@ -81,6 +109,8 @@ const Dashboard = () => {
     setter(false);
     setActiveTab("overview");
   };
+
+  const displayName = user?.first_name || user?.username || "User";
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#E1F5EE", color: "#444441" }}>
@@ -138,11 +168,14 @@ const Dashboard = () => {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: "#b8e0d4" }}>
-          <Button variant="ghost" className="w-full justify-start gap-3" asChild style={{ color: "#6B9E8A" }}>
-            <Link to="/">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3"
+            style={{ color: "#6B9E8A" }}
+            onClick={() => { logout(); navigate("/login"); }}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
           </Button>
         </div>
       </aside>
@@ -175,7 +208,7 @@ const Dashboard = () => {
               onClick={() => setNotificationsOpen(true)}
             >
               <Bell className="h-5 w-5" style={{ color: "#D97706" }} />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#1D9E75]" />
+              {notifUnread > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#D97706]" />}
             </button>
             <button
               onClick={() => setProfileOpen(true)}
@@ -184,20 +217,37 @@ const Dashboard = () => {
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
                 <User className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>John Doe</span>
+              <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>{displayName}</span>
             </button>
           </div>
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          {/* OVERVIEW TAB  */}
-          {activeTab === "overview" && (
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
+            </div>
+          )}
+          {isError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="flex items-center gap-3 py-6">
+                <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-red-700">Failed to load requests</p>
+                  <p className="text-sm text-red-500">{error?.message || "Please try again later."}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {!isLoading && activeTab === "overview" && (
             <>
-              <WelcomeCard userName="John">
+              <WelcomeCard userName={displayName}>
                 <div className="rounded-xl px-3 py-2" style={{ backgroundColor: "rgba(255, 255, 255, 0.08)" }}>
                   <p className="text-[10px] uppercase tracking-wider" style={{ color: "#9FE1CB" }}>Next Pickup</p>
                   <p className="mt-1 text-sm font-semibold text-white">
-                    {nextPickup ? `${nextPickup.date} · ${nextPickup.time}` : "No pending pickups"}
+                    {nextPickup
+                      ? `${formatDate(nextPickup.scheduled_datetime)} · ${formatTime(nextPickup.scheduled_datetime)}`
+                      : "No pending pickups"}
                   </p>
                 </div>
               </WelcomeCard>
@@ -216,7 +266,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 sm:space-y-4">
-                    {mockRequests.slice(0, 3).map((request) => {
+                    {requests.slice(0, 3).map((request) => {
                       const status = statusConfig[request.status as keyof typeof statusConfig];
                       return (
                         <div
@@ -228,9 +278,9 @@ const Dashboard = () => {
                               <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
                             <div>
-                              <p className="font-medium text-sm sm:text-base" style={{ color: "#0F6E56" }}>{request.wasteType}</p>
+                              <p className="font-medium text-sm sm:text-base" style={{ color: "#0F6E56" }}>{request.waste_type}</p>
                               <p className="text-xs sm:text-sm" style={{ color: "#444441" }}>
-                                {request.date} at {request.time}
+                                {formatDate(request.scheduled_datetime)} at {formatTime(request.scheduled_datetime)}
                               </p>
                             </div>
                           </div>
@@ -241,14 +291,17 @@ const Dashboard = () => {
                         </div>
                       );
                     })}
+                    {requests.length === 0 && (
+                      <p className="text-center py-8" style={{ color: "#444441" }}>No requests yet.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </>
           )}
 
-          {/* MY REQUESTS TAB  */}
-          {activeTab === "requests" && (
+          {/* MY REQUESTS TAB */}
+          {!isLoading && activeTab === "requests" && (
             <>
               {/* Stats Grid */}
               <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
@@ -291,9 +344,9 @@ const Dashboard = () => {
                             <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </div>
                           <div>
-                            <p className="font-medium text-sm sm:text-base" style={{ color: "#0F6E56" }}>{request.wasteType}</p>
+                            <p className="font-medium text-sm sm:text-base" style={{ color: "#0F6E56" }}>{request.waste_type}</p>
                             <p className="text-xs sm:text-sm" style={{ color: "#444441" }}>
-                              {request.date} at {request.time} · <span className="hidden sm:inline">{request.address}</span>
+                              {formatDate(request.scheduled_datetime)} at {formatTime(request.scheduled_datetime)} · <span className="hidden sm:inline">{request.address}</span>
                             </p>
                           </div>
                         </div>
@@ -331,15 +384,15 @@ const Dashboard = () => {
             <Label htmlFor="waste-type" className="text-[#444441]">Waste Type</Label>
             <div className="relative">
               <Trash2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-              <Select>
+              <Select value={scheduleForm.waste_type} onValueChange={(v) => handleScheduleChange("waste_type", v)}>
                 <SelectTrigger id="waste-type" className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]">
                   <SelectValue placeholder="Select waste type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">General Waste</SelectItem>
-                  <SelectItem value="recyclables">Recyclables</SelectItem>
-                  <SelectItem value="organic">Organic Waste</SelectItem>
-                  <SelectItem value="ewaste">E-Waste</SelectItem>
+                  <SelectItem value="General Waste">General Waste</SelectItem>
+                  <SelectItem value="Recyclables">Recyclables</SelectItem>
+                  <SelectItem value="Organic Waste">Organic Waste</SelectItem>
+                  <SelectItem value="E-Waste">E-Waste</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -349,14 +402,14 @@ const Dashboard = () => {
               <Label htmlFor="pickup-date" className="text-[#444441]">Preferred Date</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-                <Input id="pickup-date" type="date" className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+                <Input id="pickup-date" type="date" value={scheduleForm.date} onChange={(e) => handleScheduleChange("date", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="pickup-time" className="text-[#444441]">Preferred Time</Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-                <Input id="pickup-time" type="time" className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+                <Input id="pickup-time" type="time" value={scheduleForm.time} onChange={(e) => handleScheduleChange("time", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
               </div>
             </div>
           </div>
@@ -364,19 +417,53 @@ const Dashboard = () => {
             <Label htmlFor="pickup-address" className="text-[#444441]">Pickup Address</Label>
             <div className="relative">
               <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-              <Input id="pickup-address" placeholder="Enter your address..." className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+              <Input id="pickup-address" placeholder="Enter your address..." value={scheduleForm.address} onChange={(e) => handleScheduleChange("address", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-[#444441]">Additional Notes</Label>
-            <Textarea id="notes" placeholder="Any special instructions for the collector..." rows={3} className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+            <Textarea id="notes" placeholder="Any special instructions for the collector..." rows={3} value={scheduleForm.notes} onChange={(e) => handleScheduleChange("notes", e.target.value)} className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
           </div>
         </div>
         <DialogFooter className="flex flex-row gap-2 sm:gap-3 px-2">
           <Button variant="outline" className="flex-1" onClick={() => handleDialogClose(setScheduleOpen)}>Cancel</Button>
-          <Button className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56] gap-2" onClick={() => handleDialogClose(setScheduleOpen)}>
-            <Send className="h-4 w-4" style={{ color: "#0D9488" }} />
-            Submit Request
+          <Button
+            className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56] gap-2"
+            disabled={createPickup.isPending}
+            onClick={() => {
+              if (!scheduleForm.waste_type || !scheduleForm.date || !scheduleForm.time || !scheduleForm.address) {
+                toast.error("Please fill in all required fields.");
+                return;
+              }
+              const scheduled_datetime = `${scheduleForm.date}T${scheduleForm.time}:00Z`;
+              createPickup.mutate(
+                {
+                  waste_type: scheduleForm.waste_type as PickupRequest["waste_type"],
+                  scheduled_datetime,
+                  address: scheduleForm.address,
+                  notes: scheduleForm.notes,
+                  status: "pending",
+                  priority: "normal",
+                },
+                {
+                  onSuccess: () => {
+                    toast.success("Pickup request submitted!");
+                    setScheduleForm({ waste_type: "", date: "", time: "", address: "", notes: "" });
+                    handleDialogClose(setScheduleOpen);
+                  },
+                  onError: (err: Error) => {
+                    toast.error(err.message || "Failed to submit request. Please try again.");
+                  },
+                }
+              );
+            }}
+          >
+            {createPickup.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" style={{ color: "#0D9488" }} />
+            )}
+            {createPickup.isPending ? "Submitting..." : "Submit Request"}
           </Button>
         </DialogFooter>
       </DashboardDialog>
@@ -394,7 +481,7 @@ const Dashboard = () => {
         <Tabs defaultValue="all" className="flex flex-col gap-3 mt-2 px-2">
           <TabsList className="grid w-full grid-cols-4 h-auto p-1" style={{ backgroundColor: "#E1F5EE" }}>
             <TabsTrigger value="all" className="text-xs sm:text-sm py-2 data-[state=active]:bg-[#1D9E75] data-[state=active]:text-white">
-              All ({mockRequests.length})
+              All ({requests.length})
             </TabsTrigger>
             <TabsTrigger value="completed" className="text-xs sm:text-sm py-2 data-[state=active]:bg-[#1D9E75] data-[state=active]:text-white">
               Done ({completedRequests.length})
@@ -409,7 +496,7 @@ const Dashboard = () => {
 
           <div className="overflow-y-auto scrollbar-hide pr-1" style={{ maxHeight: "300px" }}>
             <TabsContent value="all" className="mt-0">
-              <RequestsList requests={mockRequests} />
+              <RequestsList requests={requests} />
             </TabsContent>
             <TabsContent value="completed" className="mt-0">
               <RequestsList requests={completedRequests} />
@@ -456,7 +543,7 @@ const Dashboard = () => {
             <h4 className="font-medium" style={{ color: "#0F6E56" }}>Preferences</h4>
             <div className="space-y-2">
               <Label htmlFor="default-address">Default Pickup Address</Label>
-              <Input id="default-address" placeholder="Enter your default address..." defaultValue="123 Main St, Nairobi" />
+              <Input id="default-address" placeholder="Enter your default address..." defaultValue={user?.address || ""} />
             </div>
           </div>
 
@@ -491,8 +578,10 @@ const Dashboard = () => {
               <User className="h-10 w-10 text-white" />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>John Doe</h3>
-              <p className="text-sm" style={{ color: "#444441" }}>john.doe@example.com</p>
+              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
+              </h3>
+              <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
               <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Resident</Badge>
             </div>
           </div>
@@ -500,19 +589,21 @@ const Dashboard = () => {
           <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>+254 700 123 456</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Address</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>123 Main St, Nairobi</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.address || "—"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>January 2026</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>
+                {user?.date_joined ? (() => { try { return format(parseISO(user.date_joined), "MMMM yyyy"); } catch { return user.date_joined; } })() : "—"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Total Requests</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>12</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{requests.length}</span>
             </div>
           </div>
         </div>
@@ -534,7 +625,14 @@ const Dashboard = () => {
   );
 };
 
-const RequestsList = ({ requests }: { requests: typeof mockRequests }) => {
+const RequestsList = ({ requests }: { requests: PickupRequest[] }) => {
+  const formatDate = (iso: string) => {
+    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
+  };
+  const formatTime = (iso: string) => {
+    try { return format(parseISO(iso), "hh:mm a"); } catch { return ""; }
+  };
+
   if (requests.length === 0) {
     return (
       <p className="text-center py-8" style={{ color: "#444441" }}>No requests in this category.</p>
@@ -557,9 +655,9 @@ const RequestsList = ({ requests }: { requests: typeof mockRequests }) => {
                   <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium text-sm" style={{ color: "#0F6E56" }}>{request.wasteType}</p>
+                  <p className="font-medium text-sm" style={{ color: "#0F6E56" }}>{request.waste_type}</p>
                   <p className="text-xs" style={{ color: "#444441" }}>
-                    {request.date} at {request.time}
+                    {formatDate(request.scheduled_datetime)} at {formatTime(request.scheduled_datetime)}
                   </p>
                 </div>
               </div>

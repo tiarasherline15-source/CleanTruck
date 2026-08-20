@@ -29,6 +29,8 @@ export interface PickupRequest {
   notes: string;
   estimated_weight_kg: number | null;
   actual_weight_kg: number | null;
+  resident_detail?: User;
+  collector_detail?: User;
   created_at: string;
   updated_at: string;
 }
