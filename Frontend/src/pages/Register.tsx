@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Lock, User, Phone, MapPin, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Phone, MapPin, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -14,6 +14,21 @@ const roleRedirect: Record<string, string> = {
   collector: "/collector",
   admin: "/admin",
 };
+
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { score, label: "Weak", color: "#DC2626" };
+  if (score <= 3) return { score, label: "Fair", color: "#D97706" };
+  if (score <= 4) return { score, label: "Good", color: "#1D9E75" };
+  return { score, label: "Strong", color: "#0F6E56" };
+}
 
 const Register = () => {
   const { register } = useAuth();
@@ -28,6 +43,10 @@ const Register = () => {
     confirmPassword: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const passwordStrength = getPasswordStrength(formData.password);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -104,7 +123,8 @@ const Register = () => {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="name"
-                      placeholder="John Doe"
+                      placeholder="samantha miller"
+                      autoComplete="name"
                       value={formData.name}
                       onChange={(e) => handleChange("name", e.target.value)}
                       className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
@@ -122,6 +142,7 @@ const Register = () => {
                     <Input
                       id="phone"
                       placeholder="+254 700 123 456"
+                      autoComplete="tel"
                       value={formData.phone}
                       onChange={(e) => handleChange("phone", e.target.value)}
                       className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
@@ -141,6 +162,7 @@ const Register = () => {
                     id="email"
                     type="email"
                     placeholder="you@example.com"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
@@ -158,6 +180,7 @@ const Register = () => {
                   <Input
                     id="address"
                     placeholder="123 Main Street, Westlands"
+                    autoComplete="street-address"
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
                     className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
@@ -197,14 +220,42 @@ const Register = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
+                      autoComplete="new-password"
                       value={formData.password}
                       onChange={(e) => handleChange("password", e.target.value)}
-                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
+                      className="pl-10 pr-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
                   </div>
+                  {formData.password.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className="h-1 flex-1 rounded-full transition-colors duration-300"
+                            style={{
+                              backgroundColor: i <= passwordStrength.score ? passwordStrength.color : "#e5e7eb",
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs" style={{ color: passwordStrength.color }}>
+                        {passwordStrength.label}
+                        {passwordStrength.score <= 2 && ": add uppercase, numbers, and symbols"}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -215,13 +266,22 @@ const Register = () => {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
                     <Input
                       id="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="••••••••"
+                      autoComplete="new-password"
                       value={formData.confirmPassword}
                       onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                      className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
+                      className="pl-10 pr-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
                       required
                     />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -45,8 +45,8 @@
     --warning: 38 92% 50%;
     --warning-foreground: 150 30% 15%;
 
-    --border: 45 15% 88%;
-    --input: 45 15% 88%;
+    --border: 150 10% 85%;
+    --input: 150 10% 85%;
     --ring: 160 56% 24%;
 
     --radius: 0.75rem;
@@ -189,6 +189,8 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

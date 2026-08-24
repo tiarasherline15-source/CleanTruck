@@ -4,38 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle2, Mail, Phone } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Mail, Phone, Loader2, Eye, EyeOff } from "lucide-react";
+import { api } from "@/lib/api";
 
 type VerificationMethod = "email" | "phone";
 
 type Step = "identify" | "verify" | "reset" | "success";
-
-const mockUsers = [
-  { name: "Jane Wanjiku", email: "jane@example.com", phone: "+254712345678" },
-  { name: "John Kariuki", email: "john@example.com", phone: "+254700123456" },
-  { name: "Grace Achieng", email: "grace@example.com", phone: "+254734987654" },
-];
 
 const ForgotPassword = () => {
   const [step, setStep] = useState<Step>("identify");
   const [method, setMethod] = useState<VerificationMethod>("email");
   const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
-  const [otpCode, setOtpCode] = useState("123456");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const findUser = () => {
-    if (method === "email") {
-      return mockUsers.find((user) => user.email.toLowerCase() === identifier.trim().toLowerCase());
-    }
-
-    return mockUsers.find((user) => user.phone === identifier.trim());
-  };
-
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -46,19 +35,23 @@ const ForgotPassword = () => {
       return;
     }
 
-    const matchedUser = findUser();
-    if (!matchedUser) {
-      setError("No account matches that email or phone number. Please try again.");
-      return;
+    setIsLoading(true);
+    try {
+      await api.post("/auth/forgot-password/", {
+        identifier: cleanIdentifier,
+        method,
+      });
+      setMessage(`OTP sent successfully to your ${method === "email" ? "email" : "phone via SMS"}.`);
+      setStep("verify");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send OTP. Please try again.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
     }
-
-    setOtpCode("123456");
-    const deliveryTarget = method === "email" ? matchedUser.email : `${matchedUser.phone} via SMS`;
-    setMessage(`OTP sent successfully to ${deliveryTarget}. Demo code: 123456`);
-    setStep("verify");
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -68,16 +61,24 @@ const ForgotPassword = () => {
       return;
     }
 
-    if (otp.trim() !== otpCode) {
-      setError("Invalid OTP. Please use the demo code shown in the message.");
-      return;
+    setIsLoading(true);
+    try {
+      await api.post("/auth/verify-otp/", {
+        identifier: identifier.trim(),
+        code: otp.trim(),
+        method,
+      });
+      setMessage("OTP verified successfully. Set a new password below.");
+      setStep("reset");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid OTP. Please try again.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
     }
-
-    setMessage("OTP verified successfully. Set a new password below.");
-    setStep("reset");
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setMessage("");
@@ -87,8 +88,8 @@ const ForgotPassword = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
 
@@ -97,8 +98,23 @@ const ForgotPassword = () => {
       return;
     }
 
-    setMessage("Your password has been reset successfully. You can now sign in.");
-    setStep("success");
+    setIsLoading(true);
+    try {
+      await api.post("/auth/reset-password/", {
+        identifier: identifier.trim(),
+        code: otp.trim(),
+        method,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setMessage("Your password has been reset successfully. You can now sign in.");
+      setStep("success");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to reset password. Please try again.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -187,6 +203,7 @@ const ForgotPassword = () => {
                   <Input
                     id="identifier"
                     type={method === "email" ? "email" : "tel"}
+                    autoComplete={method === "email" ? "email" : "tel"}
                     placeholder={method === "email" ? "you@example.com" : "+254712345678"}
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
@@ -197,8 +214,15 @@ const ForgotPassword = () => {
               </CardContent>
 
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
-                  Send OTP
+                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending OTP...
+                    </span>
+                  ) : (
+                    "Send OTP"
+                  )}
                 </Button>
               </CardFooter>
             </form>
@@ -222,19 +246,31 @@ const ForgotPassword = () => {
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  We sent your code to {method === "email" ? identifier : `${identifier} via SMS`}. Use the demo OTP: <strong>123456</strong>
+                  We sent your code to {method === "email" ? identifier : `${identifier} via SMS`}.
                 </p>
               </CardContent>
 
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
-                  Verify OTP
+                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : (
+                    "Verify OTP"
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   className="text-[#1D9E75]"
-                  onClick={() => setStep("identify")}
+                  onClick={() => {
+                    setStep("identify");
+                    setOtp("");
+                    setError("");
+                    setMessage("");
+                  }}
                 >
                   Change method
                 </Button>
@@ -249,34 +285,63 @@ const ForgotPassword = () => {
                   <Label htmlFor="newPassword" className="text-[#444441]">
                     New Password
                   </Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pr-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-[#444441]">
                     Confirm New Password
                   </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pr-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </CardContent>
 
               <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg">
-                  Reset Password
+                <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Resetting password...
+                    </span>
+                  ) : (
+                    "Reset Password"
+                  )}
                 </Button>
               </CardFooter>
             </form>

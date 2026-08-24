@@ -368,6 +368,7 @@ Zone (1) ──→ (N) RouteStops
 | POST | `/api/token/refresh/` | Refresh an access token | Public |
 | GET | `/api/users/me/` | Get current user profile | Required |
 | PATCH | `/api/users/me/` | Update current user profile | Required |
+| POST | `/api/users/me/change-password/` | Change password and clear forced-password state | Required |
 
 ### Users (Admin)
 | Method | Endpoint | Description | Auth |
@@ -375,8 +376,17 @@ Zone (1) ──→ (N) RouteStops
 | GET | `/api/users/` | List users (admin: all with search/role filter; others: self only) | Required |
 | GET | `/api/users/{id}/` | Get user detail | Required |
 | PATCH | `/api/users/{id}/` | Update user | Required |
+| POST | `/api/users/create-collector/` | Create collector with one-time temporary password | Admin role |
 
 **Query params:** `?search=<query>&role=<resident|collector|admin>`
+
+### Contact Messages
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| POST | `/api/contact-messages/` | Submit a contact message | Public |
+| GET | `/api/contact-messages/` | List contact messages | Website admin role |
+| PATCH | `/api/contact-messages/{id}/` | Update message status/details | Website admin role |
+| DELETE | `/api/contact-messages/{id}/` | Delete a contact message | Website admin role |
 
 ### Pickup Requests
 | Method | Endpoint | Description | Auth |
@@ -687,7 +697,7 @@ CleanTruck/
 
 1. ⏳ Install and configure database, run migrations, create superuser
 2. ⏳ Test all API endpoints with Postman or Django REST Framework browsable API
-3. ⏳ Connect frontend dashboards to live API data
+3. ✅ Connect frontend dashboards to live API data
 4. ⏳ Add SMS OTP verification flow (Africa's Talking integration)
 5. ⏳ Implement WebSocket notifications (Django Channels + Redis)
 6. ⏳ Add input validation and error handling on frontend forms

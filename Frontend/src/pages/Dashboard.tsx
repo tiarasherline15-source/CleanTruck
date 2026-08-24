@@ -18,17 +18,14 @@ import {
   Loader2
 } from "lucide-react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
+import ImageUpload from "@/components/ui/ImageUpload";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
+import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useMyPickupRequests, useCreatePickupRequest, useNotifications } from "@/hooks/useApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
-import type { PickupRequest, PaginatedResponse } from "@/lib/types";
-
-function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.results;
-}
+import type { PickupRequest } from "@/lib/types";
+import { normalizeList, formatDate, formatTime } from "@/lib/normalize";
 
 const statusConfig = {
   pending: { label: "Pending", icon: Clock, variant: "secondary" as const },
@@ -38,7 +35,7 @@ const statusConfig = {
 };
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const { data: pickupData, isLoading, isError, error } = useMyPickupRequests();
   const createPickup = useCreatePickupRequest();
@@ -66,13 +63,6 @@ const Dashboard = () => {
   };
 
   const requests = normalizeList<PickupRequest>(pickupData);
-
-  const formatDate = (iso: string) => {
-    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
-  };
-  const formatTime = (iso: string) => {
-    try { return format(parseISO(iso), "hh:mm a"); } catch { return ""; }
-  };
 
   const completedRequests = requests.filter((r) => r.status === "completed");
   const pendingRequests = requests.filter((r) => r.status === "pending");
@@ -214,8 +204,12 @@ const Dashboard = () => {
               onClick={() => setProfileOpen(true)}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-[#E1F5EE] transition-colors cursor-pointer"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
-                <User className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden bg-[#0F6E56]">
+                {user?.profile_picture ? (
+                  <img src={user.profile_picture} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-5 w-5 text-white" />
+                )}
               </div>
               <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>{displayName}</span>
             </button>
@@ -223,11 +217,7 @@ const Dashboard = () => {
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
-            </div>
-          )}
+          {isLoading && <DashboardFullSkeleton />}
           {isError && (
             <Card className="border-red-200 bg-red-50">
               <CardContent className="flex items-center gap-3 py-6">
@@ -379,13 +369,13 @@ const Dashboard = () => {
         }}
         title="Schedule a Pickup"
       >
-        <div className="space-y-4 py-4 px-2">
+        <div className="space-y-5 py-2 sm:py-4">
           <div className="space-y-2">
             <Label htmlFor="waste-type" className="text-[#444441]">Waste Type</Label>
             <div className="relative">
               <Trash2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
               <Select value={scheduleForm.waste_type} onValueChange={(v) => handleScheduleChange("waste_type", v)}>
-                <SelectTrigger id="waste-type" className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]">
+                <SelectTrigger id="waste-type" className="pl-10 h-11 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]">
                   <SelectValue placeholder="Select waste type..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -397,38 +387,75 @@ const Dashboard = () => {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="pickup-date" className="text-[#444441]">Preferred Date</Label>
+              <Label className="text-[#444441]">Preferred Date</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-                <Input id="pickup-date" type="date" value={scheduleForm.date} onChange={(e) => handleScheduleChange("date", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 z-10" style={{ color: "#6B9E8A" }} />
+                <Select value={scheduleForm.date} onValueChange={(v) => handleScheduleChange("date", v)}>
+                  <SelectTrigger className="pl-10 h-11 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75] text-xs sm:text-sm">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(() => {
+                      const dates: { label: string; value: string }[] = [];
+                      for (let i = 0; i < 14; i++) {
+                        const d = new Date();
+                        d.setDate(d.getDate() + i);
+                        const iso = d.toISOString().split("T")[0];
+                        const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                        dates.push({ label, value: iso });
+                      }
+                      return dates.map((d) => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ));
+                    })()}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pickup-time" className="text-[#444441]">Preferred Time</Label>
+              <Label className="text-[#444441]">Preferred Time</Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-                <Input id="pickup-time" type="time" value={scheduleForm.time} onChange={(e) => handleScheduleChange("time", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 z-10" style={{ color: "#6B9E8A" }} />
+                <Select value={scheduleForm.time} onValueChange={(v) => handleScheduleChange("time", v)}>
+                  <SelectTrigger className="pl-10 h-11 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75] text-xs sm:text-sm">
+                    <SelectValue placeholder="Time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00"].map((t) => {
+                      const [h] = t.split(":");
+                      const hour = parseInt(h);
+                      const display = hour <= 12 ? `${hour === 0 ? 12 : hour}:00 ${hour < 12 ? "AM" : "PM"}` : `${hour - 12}:00 PM`;
+                      return (
+                        <SelectItem key={t} value={t}>{display}</SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="pickup-address" className="text-[#444441]">Pickup Address</Label>
             <div className="relative">
               <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-              <Input id="pickup-address" placeholder="Enter your address..." value={scheduleForm.address} onChange={(e) => handleScheduleChange("address", e.target.value)} className="pl-10 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+              <Input id="pickup-address" placeholder="Enter your address..." value={scheduleForm.address} onChange={(e) => handleScheduleChange("address", e.target.value)} className="pl-10 h-11 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-[#444441]">Additional Notes</Label>
-            <Textarea id="notes" placeholder="Any special instructions for the collector..." rows={3} value={scheduleForm.notes} onChange={(e) => handleScheduleChange("notes", e.target.value)} className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+            <Textarea id="notes" placeholder="Any special instructions for the collector..." rows={3} value={scheduleForm.notes} onChange={(e) => handleScheduleChange("notes", e.target.value)} className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75] min-h-[80px]" />
           </div>
         </div>
-        <DialogFooter className="flex flex-row gap-2 sm:gap-3 px-2">
-          <Button variant="outline" className="flex-1" onClick={() => handleDialogClose(setScheduleOpen)}>Cancel</Button>
+
+        <div className="flex flex-row gap-2 sm:gap-3 pt-2">
+          <Button variant="outline" className="flex-1 h-11" onClick={() => handleDialogClose(setScheduleOpen)}>Cancel</Button>
           <Button
-            className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56] gap-2"
+            className="flex-1 h-11 bg-[#1D9E75] text-white hover:bg-[#0F6E56] gap-2"
             disabled={createPickup.isPending}
             onClick={() => {
               if (!scheduleForm.waste_type || !scheduleForm.date || !scheduleForm.time || !scheduleForm.address) {
@@ -465,7 +492,7 @@ const Dashboard = () => {
             )}
             {createPickup.isPending ? "Submitting..." : "Submit Request"}
           </Button>
-        </DialogFooter>
+        </div>
       </DashboardDialog>
 
       {/*  VIEW ALL REQUESTS DIALOG  */}
@@ -550,7 +577,7 @@ const Dashboard = () => {
           <div className="space-y-3">
             <h4 className="font-medium" style={{ color: "#0F6E56" }}>Account</h4>
             <div className="flex gap-3">
-              <Button variant="outline" size="sm">Change Password</Button>
+              <Button variant="outline" size="sm" onClick={() => { setSettingsOpen(false); navigate("/change-password"); }}>Change Password</Button>
               <Button variant="outline" size="sm" className="text-[#dc2626] hover:text-[#dc2626]">Delete Account</Button>
             </div>
           </div>
@@ -572,33 +599,37 @@ const Dashboard = () => {
         }}
         title="User Profile"
       >
-        <div className="space-y-6 py-4 px-2">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F6E56]">
-              <User className="h-10 w-10 text-white" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
-                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
-              </h3>
-              <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
-              <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Resident</Badge>
+        <div className="py-4 px-2">
+          {/* Sticky header */}
+          <div className="sticky top-0 z-10 bg-white pb-4 -mx-2 px-2 -mt-2 pt-2">
+            <div className="flex flex-col items-center gap-4">
+              <ImageUpload
+                currentImage={user?.profile_picture}
+                onUploadSuccess={(url) => updateUser({ profile_picture: url })}
+              />
+              <div className="text-center">
+                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                  {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
+                </h3>
+                <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
+                <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Resident</Badge>
+              </div>
             </div>
           </div>
 
           <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "-"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Address</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.address || "—"}</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.address || "-"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
               <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>
-                {user?.date_joined ? (() => { try { return format(parseISO(user.date_joined), "MMMM yyyy"); } catch { return user.date_joined; } })() : "—"}
+                {user?.date_joined ? (() => { try { return format(parseISO(user.date_joined), "MMMM yyyy"); } catch { return user.date_joined; } })() : "-"}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -626,12 +657,6 @@ const Dashboard = () => {
 };
 
 const RequestsList = ({ requests }: { requests: PickupRequest[] }) => {
-  const formatDate = (iso: string) => {
-    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
-  };
-  const formatTime = (iso: string) => {
-    try { return format(parseISO(iso), "hh:mm a"); } catch { return ""; }
-  };
 
   if (requests.length === 0) {
     return (

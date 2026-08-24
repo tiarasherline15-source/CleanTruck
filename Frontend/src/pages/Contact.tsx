@@ -23,6 +23,7 @@ import {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -45,8 +46,7 @@ const Contact = () => {
     e.preventDefault();
     setSending(true);
     try {
-      // In production, this would POST to /api/contact/
-      await new Promise((r) => setTimeout(r, 1000));
+      await api.post("/contact-messages/", formData);
       setSubmitted(true);
       toast({
         title: "Message sent!",

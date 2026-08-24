@@ -10,6 +10,7 @@ export interface User {
   phone: string;
   address: string;
   zone: string;
+  must_change_password: boolean;
   profile_picture?: string;
   date_joined: string;
 }
@@ -83,6 +84,18 @@ export interface PaginatedResponse<T> {
 export interface AuthTokens {
   access: string;
   refresh: string;
+}
+
+export interface CreateCollectorPayload {
+  email: string;
+  first_name: string;
+  last_name?: string;
+  phone?: string;
+  zone?: string;
+}
+
+export interface CreatedCollector extends User {
+  temporary_password: string;
 }
 
 export interface LoginPayload {

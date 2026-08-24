@@ -7,6 +7,8 @@ import type {
   Notification,
   CollectionHistory,
   PaginatedResponse,
+  CreateCollectorPayload,
+  CreatedCollector,
 } from "@/lib/types";
 
 //  Pickup Requests 
@@ -90,6 +92,39 @@ export function useUsers(params?: { search?: string; role?: string; page?: numbe
     queryKey: ["users", params],
     queryFn: () =>
       api.get<PaginatedResponse<User> | User[]>(`/users/${query ? `?${query}` : ""}`),
+  });
+}
+
+export function useCreateCollector() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateCollectorPayload) =>
+      api.post<CreatedCollector>("/users/create-collector/", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<User> }) =>
+      api.patch<User>(`/users/${id}/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.delete(`/users/${id}/`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+    },
   });
 }
 

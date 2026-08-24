@@ -21,6 +21,8 @@ class User(AbstractUser):
     zone = models.CharField(max_length=100, blank=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
     location = models.JSONField(blank=True, default=dict)
+    is_phone_verified = models.BooleanField(default=False)
+    must_change_password = models.BooleanField(default=False)
 
     def __str__(self):
         return self.get_full_name() or self.username
@@ -276,3 +278,23 @@ class OTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user} ({self.purpose})"
+
+
+class ContactMessage(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        REPLIED = 'replied', 'Replied'
+        ARCHIVED = 'archived', 'Archived'
+
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Contact message from {self.email}"

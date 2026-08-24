@@ -12,6 +12,7 @@ import CollectorDashboard from "./pages/CollectorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import ChangePassword from "./pages/ChangePassword";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/collector" element={<ProtectedRoute allowedRoles={["collector"]}><CollectorDashboard /></ProtectedRoute>} />

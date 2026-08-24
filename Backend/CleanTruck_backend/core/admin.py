@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     User, Route, PickupRequest, CollectionHistory, Notification,
     Zone, UserSettings, RouteStops, OTP,
+    ContactMessage,
 )
 
 admin.site.register(User, UserAdmin)
@@ -14,3 +15,4 @@ admin.site.register(Zone)
 admin.site.register(UserSettings)
 admin.site.register(RouteStops)
 admin.site.register(OTP)
+admin.site.register(ContactMessage)

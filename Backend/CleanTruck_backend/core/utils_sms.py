@@ -6,6 +6,9 @@ import secrets
 import string
 import logging
 from datetime import timedelta
+import requests as _requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from django.conf import settings
 from django.utils import timezone
 
@@ -22,6 +25,47 @@ def get_otp_expiry(minutes=10):
     return timezone.now() + timedelta(minutes=minutes)
 
 
+_ssl_patched = False
+
+
+def _patch_ssl_for_at():
+    """
+    Patch Africa's Talking SDK to disable SSL verification.
+    Needed on Windows / corporate networks where SSL interception causes
+    'WRONG_VERSION_NUMBER' errors on api.sandbox.africastalking.com.
+    """
+    global _ssl_patched
+    if _ssl_patched:
+        return
+
+    try:
+        from africastalking.Service import Service
+
+        _orig_make_get = Service._Service__make_get_request
+        _orig_make_post = Service._Service__make_post_request
+
+        def _patched_get(url, headers, data, params, callback=None, timeout=30):
+            res = _requests.get(url=url, headers=headers, params=params,
+                                data=data, timeout=timeout, verify=False)
+            if callback is None or callback == {}:
+                return res
+            callback(res)
+
+        def _patched_post(url, headers, data, params, callback=None, timeout=30):
+            res = _requests.post(url=url, headers=headers, params=params,
+                                 data=data, timeout=timeout, verify=False)
+            if callback is None or callback == {}:
+                return res
+            callback(res)
+
+        Service._Service__make_get_request = staticmethod(_patched_get)
+        Service._Service__make_post_request = staticmethod(_patched_post)
+        _ssl_patched = True
+        logger.info("Patched Africa's Talking SDK for SSL compatibility")
+    except Exception as e:
+        logger.debug(f"AT SSL patch skipped: {e}")
+
+
 def send_sms(phone_number, message):
     """
     Send an SMS via Africa's Talking.
@@ -29,6 +73,8 @@ def send_sms(phone_number, message):
     In sandbox mode, messages are simulated.
     """
     try:
+        _patch_ssl_for_at()
+
         import africastalking
 
         africastalking.initialize(
@@ -95,63 +141,6 @@ def send_otp_sms(phone_number, otp_code, purpose="verification"):
 
 
 def send_otp_email(user, otp_code, purpose="verification"):
-    """Send an OTP code via email using Django's email backend."""
-    from django.core.mail import send_mail
-
-    purpose_labels = {
-        "password_reset": "Password Reset",
-        "password_change": "Password Change",
-        "registration": "Registration",
-        "sms_verification": "Phone Verification",
-    }
-    label = purpose_labels.get(purpose, "Verification")
-
-    subject = f"Your CleanTruck {label} Code"
-
-    html_message = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; background-color: #f6fafa; padding: 20px;">
-            <div style="background-color: white; border-radius: 8px; padding: 30px; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #0F6E56;">Your Verification Code</h2>
-                <p style="color: #444441; font-size: 16px;">
-                    Hello {user.first_name},
-                </p>
-                <p style="color: #444441;">
-                    Use the following code to complete your {label.lower()}:
-                </p>
-                
-                <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f0faf8; border-radius: 8px;">
-                    <span style="font-size: 32px; font-weight: bold; color: #0F6E56; letter-spacing: 8px;">{otp_code}</span>
-                </div>
-                
-                <p style="color: #6B9E8A; font-size: 14px;">
-                    This code expires in 10 minutes. If you didn't request this, 
-                    please ignore this email.
-                </p>
-                
-                <p style="color: #444441; margin-top: 30px;">
-                    Best regards,<br/>
-                    <strong style="color: #0F6E56;">CleanTruck Team</strong>
-                </p>
-            </div>
-        </body>
-    </html>
-    """
-
-    try:
-        send_mail(
-            subject=subject,
-            message=f"Your {label} code is: {otp_code}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        logger.info(f"OTP email sent to {user.email} for {purpose}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send OTP email to {user.email}: {e}")
-        if settings.DEBUG:
-            logger.info(f"OTP email would be sent to {user.email}: code={otp_code}")
-            return True
-        return False
+    """Send an OTP code via email - delegates to utils_email."""
+    from .utils_email import send_otp_email as _send_otp_email
+    return _send_otp_email(user, otp_code, purpose)

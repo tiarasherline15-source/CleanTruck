@@ -8,25 +8,26 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import DashboardDialog from "@/components/ui/DashboardDialog";
-import { DialogFooter } from "@/components/ui/dialog";
-import { 
-  LayoutDashboard, Users, Truck, FileBarChart, Settings,
-  LogOut, User, TrendingUp, TrendingDown, Package,
-  Recycle, Scale, MapPin, Calendar, Search, Filter,
-  MoreVertical, Edit, Trash2, Eye, Download, ChevronDown,
-  BarChart3, PieChart, Activity, AlertTriangle, CheckCircle2, Clock,
-  Loader2
+import { DialogFooter } from "@/components/ui/dialog";import { Users, Truck, FileBarChart, Settings,
+  LogOut, User, Package,
+  Scale, MapPin, Calendar, Search,
+  Edit, Trash2, Eye, Download, ChevronDown,
+  BarChart3, Activity, AlertTriangle, CheckCircle2, Clock, UserPlus,
 } from "lucide-react";
-import { useUsers, usePickupRequests, useRoutes, useCollectionHistory, useNotifications } from "@/hooks/useApi";
+import { useUsers, usePickupRequests, useRoutes, useCollectionHistory, useNotifications, useUpdatePickupRequest } from "@/hooks/useApi";
+import ImageUpload from "@/components/ui/ImageUpload";
+import CreateCollectorDialog from "@/components/CreateCollectorDialog";
+import ViewUserDialog from "@/components/ViewUserDialog";
+import EditUserDialog from "@/components/EditUserDialog";
+import DeleteUserDialog from "@/components/DeleteUserDialog";
+import AssignPickupContent from "@/components/AssignPickupDialog";
+import ExportPreviewDialog, { type ExportPreviewData } from "@/components/ExportPreviewDialog";
+import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
-import type { User as UserType, PickupRequest, Route, CollectionHistory, Notification, PaginatedResponse } from "@/lib/types";
+import type { User as UserType, PickupRequest, Route, CollectionHistory, Notification } from "@/lib/types";
+import { normalizeList, formatDate, formatShortDateTime, formatMonth } from "@/lib/normalize";
 
-function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.results;
-}
 
 const roleConfig = {
   admin: { label: "Admin", className: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -36,8 +37,21 @@ const roleConfig = {
 
 const statusConfig = {
   active: { label: "Active", className: "bg-success/10 text-success border-success/20" },
-  inactive: { label: "Inactive", className: "text-muted-foreground border-muted", style: { backgroundColor: "#E1F5EE" } },
+  inactive: { label: "Inactive", className: "bg-muted/30 text-muted-foreground border-muted" },
   on_leave: { label: "On Leave", className: "bg-warning/10 text-warning border-warning/20" },
+};
+
+const pickupStatusConfig: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pending", className: "bg-warning/10 text-warning border-warning/20" },
+  in_progress: { label: "In Progress", className: "bg-primary/10 text-primary border-primary/20" },
+  completed: { label: "Completed", className: "bg-success/10 text-success border-success/20" },
+  cancelled: { label: "Cancelled", className: "bg-muted/30 text-muted-foreground border-muted" },
+};
+
+const pickupPriorityConfig: Record<string, { label: string; className: string }> = {
+  high: { label: "High", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  normal: { label: "Normal", className: "bg-primary/10 text-primary border-primary/20" },
+  low: { label: "Low", className: "bg-muted/30 text-muted-foreground border-muted" },
 };
 
 const alertTypeConfig = {
@@ -48,7 +62,7 @@ const alertTypeConfig = {
 };
 
 const AdminDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const { data: usersData, isLoading: usersLoading, isError: usersError, error: usersErr } = useUsers();
   const { data: pickupsData, isLoading: pickupsLoading, isError: pickupsError, error: pickupsErr } = usePickupRequests();
@@ -61,6 +75,16 @@ const AdminDashboard = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createCollectorOpen, setCreateCollectorOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<UserType | null>(null);
+  const [editUser, setEditUser] = useState<UserType | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserType | null>(null);
+  const [pickupSearch, setPickupSearch] = useState("");
+  const [pickupStatusFilter, setPickupStatusFilter] = useState("all");
+  const [pickupZoneFilter, setPickupZoneFilter] = useState("all");
+  const [viewPickup, setViewPickup] = useState<PickupRequest | null>(null);
+  const [assignPickup, setAssignPickup] = useState<PickupRequest | null>(null);
+  const [exportPreview, setExportPreview] = useState<ExportPreviewData | null>(null);
 
   const allUsers = normalizeList<UserType>(usersData);
   const allPickups = normalizeList<PickupRequest>(pickupsData);
@@ -79,6 +103,21 @@ const AdminDashboard = () => {
     const matchesRole = roleFilter === "all" || u.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  const filteredPickups = allPickups.filter(p => {
+    const matchesSearch = pickupSearch === "" ||
+      p.address.toLowerCase().includes(pickupSearch.toLowerCase()) ||
+      (p.zone && p.zone.toLowerCase().includes(pickupSearch.toLowerCase()));
+    const matchesStatus = pickupStatusFilter === "all" || p.status === pickupStatusFilter;
+    const matchesZone = pickupZoneFilter === "all" || p.zone === pickupZoneFilter;
+    return matchesSearch && matchesStatus && matchesZone;
+  });
+
+  const pickupZones = [...new Set(allPickups.map(p => p.zone).filter(Boolean))];
+  const collectors = allUsers.filter(u => u.role === "collector" && u.status === "active");
+  const routes = allRoutes;
+
+  const updatePickupMutation = useUpdatePickupRequest();
 
   // Computed analytics from real data 
   const totalPickups = allPickups.length;
@@ -113,7 +152,7 @@ const AdminDashboard = () => {
   // Group history by month for reports
   const monthMap = new Map<string, { count: number; weight: number }>();
   allHistory.forEach(h => {
-    const month = (() => { try { return format(parseISO(h.completed_at), "MMMM yyyy"); } catch { return "Unknown"; } })();
+    const month = formatMonth(h.completed_at);
     if (!monthMap.has(month)) monthMap.set(month, { count: 0, weight: 0 });
     const entry = monthMap.get(month)!;
     entry.count++;
@@ -138,28 +177,78 @@ const AdminDashboard = () => {
 
   const displayName = user?.first_name || user?.username || "Admin";
 
+  // Export handlers - prepare data and open preview dialog
+  const openExport = (title: string, baseName: string, headers: string[], rows: (string | number | null | undefined)[][]) => {
+    setExportPreview({ title, baseName, headers, rows });
+  };
+
+  const exportMonthlyReports = () => {
+    const headers = ["Period", "Collections", "Total Weight", "Recycling Rate", "Status"];
+    const rows = monthlyReports.map((r) => [r.period, r.totalCollections, r.totalWeight, `${r.recyclingRate}%`, "Completed"]);
+    openExport("Monthly Reports", "monthly-reports", headers, rows);
+  };
+
+  const exportSectorPerformance = () => {
+    const headers = ["Sector", "Collections", "Weight", "Efficiency", "Collectors"];
+    const rows = sectorReports.map((s) => [s.sector, s.collections, s.weight, `${s.efficiency}%`, s.collectors]);
+    openExport("Sector Performance", "sector-performance", headers, rows);
+  };
+
+  const exportPickups = () => {
+    const headers = ["ID", "Address", "Zone", "Waste Type", "Status", "Priority", "Scheduled", "Resident", "Collector", "Est. Weight (kg)", "Actual Weight (kg)", "Created"];
+    const rows = filteredPickups.map((p) => [
+      p.id, p.address, p.zone, p.waste_type, p.status, p.priority,
+      formatDate(p.scheduled_datetime),
+      p.resident_detail ? [p.resident_detail.first_name, p.resident_detail.last_name].filter(Boolean).join(" ") || p.resident_detail.email : `#${p.resident}`,
+      p.collector_detail ? [p.collector_detail.first_name, p.collector_detail.last_name].filter(Boolean).join(" ") || p.collector_detail.email : "Unassigned",
+      p.estimated_weight_kg, p.actual_weight_kg, formatDate(p.created_at),
+    ]);
+    openExport("Collection Requests", "pickup-requests", headers, rows);
+  };
+
+  const exportUsers = () => {
+    const headers = ["ID", "Name", "Email", "Role", "Status", "Phone", "Zone", "Joined"];
+    const rows = filteredUsers.map((u) => [
+      u.id, [u.first_name, u.last_name].filter(Boolean).join(" ") || u.username,
+      u.email, u.role, u.status, u.phone, u.zone, formatDate(u.date_joined),
+    ]);
+    openExport("Users", "users", headers, rows);
+  };
+
   const stats = [
-    { label: "Total Collections", value: totalPickups.toLocaleString(), icon: Package, color: "text-primary", trend: "+12.3%", trendUp: true },
-    { label: "Total Weight", value: `${(totalWeight / 1000).toFixed(1)} tons`, icon: Scale, color: "text-secondary", trend: "+8.5%", trendUp: true },
-    { label: "Active Users", value: activeUsers.toLocaleString(), icon: Users, color: "text-accent", trend: "+5.2%", trendUp: true },
-    { label: "Active Collectors", value: activeCollectors.toString(), icon: Truck, color: "text-success", trend: "+2", trendUp: true },
+    { label: "Total Collections", value: totalPickups.toLocaleString(), icon: Package, color: "text-primary" },
+    { label: "Total Weight", value: `${(totalWeight / 1000).toFixed(1)} tons`, icon: Scale, color: "text-secondary" },
+    { label: "Active Users", value: activeUsers.toLocaleString(), icon: Users, color: "text-accent" },
+    { label: "Active Collectors", value: activeCollectors.toString(), icon: Truck, color: "text-success" },
   ];
 
   const navItems = [
     { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "pickups", label: "Collection Requests", icon: Package },
     { id: "route-management", label: "Route Management", icon: MapPin },
     { id: "users", label: "User Management", icon: Users },
     { id: "reports", label: "Collection Reports", icon: FileBarChart },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const weeklyStats = days.map((day, index) => ({
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weeklyStats = days.map((day, dayIndex) => ({
     day,
-    collections: Math.floor(Math.random() * (totalPickups / 7) + (totalPickups / 14)),
+    collections: allPickups.filter((pickup) => {
+      try { return new Date(pickup.scheduled_datetime).getDay() === dayIndex; } catch { return false; }
+    }).length,
   }));
 
-  const maxCollections = Math.max(...weeklyStats.map(d => d.collections));
+  const maxCollections = Math.max(...weeklyStats.map(d => d.collections), 1);
+  const inProgressPickups = allPickups.filter((pickup) => pickup.status === "in_progress").length;
+  const activeRouteCollectorIds = new Set(allRoutes.filter((route) => route.status === "active").map((route) => route.collector));
+  const collectorStatuses = allUsers
+    .filter((candidate) => candidate.role === "collector")
+    .map((collector) => ({
+      name: [collector.first_name, collector.last_name].filter(Boolean).join(" ") || collector.username,
+      zone: collector.zone || "Unassigned",
+      status: activeRouteCollectorIds.has(collector.id) ? "On route" : collector.status === "on_leave" ? "On leave" : "Available",
+    }));
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#E1F5EE", color: "#444441" }}>
@@ -222,16 +311,16 @@ const AdminDashboard = () => {
             />
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
-              <span className="hidden sm:inline">Export Data</span>
-            </Button>
             <button
               onClick={() => setProfileOpen(true)}
               className="flex items-center gap-2 rounded-full hover:bg-[#E1F5EE] transition-colors cursor-pointer"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
-                <User className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden bg-[#0F6E56]">
+                {user?.profile_picture ? (
+                  <img src={user.profile_picture} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-5 w-5 text-white" />
+                )}
               </div>
               <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>Admin</span>
             </button>
@@ -239,18 +328,14 @@ const AdminDashboard = () => {
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
-            </div>
-          )}
+          {isLoading && <DashboardFullSkeleton />}
           {hasError && !isLoading && (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-destructive/20 bg-destructive/5">
               <CardContent className="flex items-center gap-3 py-6">
-                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                 <div>
-                  <p className="font-medium text-red-700">Failed to load data</p>
-                  <p className="text-sm text-red-500">{errorMsg || "Please try again later."}</p>
+                  <p className="font-medium text-destructive">Failed to load data</p>
+                  <p className="text-sm text-destructive/70">{errorMsg || "Please try again later."}</p>
                 </div>
               </CardContent>
             </Card>
@@ -268,14 +353,10 @@ const AdminDashboard = () => {
                       <div className={`flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center ${stat.color}`}>
                         <stat.icon className="h-4 w-4 sm:h-6 sm:w-6" />
                       </div>
-                      <div className={`flex items-center gap-1 text-xs sm:text-sm ${stat.trendUp ? 'text-success' : 'text-destructive'}`}>
-                        {stat.trendUp ? <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />}
-                        {stat.trend}
-                      </div>
                     </div>
                     <div className="mt-3 sm:mt-4">
-                      <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="text-base sm:text-xl font-bold">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -302,14 +383,14 @@ const AdminDashboard = () => {
                     const config = alertTypeConfig[notif.type as keyof typeof alertTypeConfig];
                     const Icon = config.icon;
                     return (
-                      <div key={notif.id} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-lg border" style={{ backgroundColor: "#F6FAFA", borderColor: "#b8e0d4" }}>
-                        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center shrink-0" style={{ color: "#0F6E56" }}>
-                          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <div key={notif.id} className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-lg border border-[#b8e0d4] bg-[#F6FAFA]">
+                        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center shrink-0">
+                          <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: "#0F6E56" }} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium">{notif.message}</p>
                           <p className="text-[11px] sm:text-xs text-muted-foreground">
-                            {(() => { try { return format(parseISO(notif.created_at), "MMM d, h:mm a"); } catch { return notif.created_at; } })()}
+                            {formatShortDateTime(notif.created_at)}
                           </p>
                         </div>
                       </div>
@@ -381,7 +462,7 @@ const AdminDashboard = () => {
                         <circle cx="50" cy="50" r="40" fill="none" stroke="#E5E7EB" strokeWidth="8" />
                         <circle 
                           cx="50" cy="50" r="40" 
-                          fill="none" stroke="#059669" strokeWidth="8"
+                          fill="none" stroke="#1D9E75" strokeWidth="8"
                           strokeDasharray={`${collectionRate * 2.513} 251.3`}
                           strokeLinecap="round"
                         />
@@ -398,7 +479,7 @@ const AdminDashboard = () => {
                         <circle cx="50" cy="50" r="40" fill="none" stroke="#E5E7EB" strokeWidth="8" />
                         <circle 
                           cx="50" cy="50" r="40" 
-                          fill="none" stroke="#4F46E5" strokeWidth="8"
+                          fill="none" stroke="#0F6E56" strokeWidth="8"
                           strokeDasharray={`${recyclingRate * 2.513} 251.3`}
                           strokeLinecap="round"
                         />
@@ -412,7 +493,7 @@ const AdminDashboard = () => {
                   <CardContent className="p-4 sm:p-6 text-center">
                     <div className="flex h-20 sm:h-28 items-center justify-center">
                       <div className="text-center">
-                        <p className="text-xl sm:text-3xl font-bold text-secondary">{allRoutes.length} routes</p>
+                        <p className="text-base sm:text-xl font-bold text-secondary">{allRoutes.length} routes</p>
                         <Clock className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mt-2" style={{ color: "#D97706" }} />
                       </div>
                     </div>
@@ -424,11 +505,11 @@ const AdminDashboard = () => {
                   <CardContent className="p-4 sm:p-6 text-center">
                     <div className="flex h-20 sm:h-28 items-center justify-center">
                       <div className="text-center">
-                        <p className="text-xl sm:text-3xl font-bold text-accent">{collectionRate}%</p>
-                        <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mt-2" style={{ color: "#059669" }} />
+                        <p className="text-base sm:text-xl font-bold text-primary">{activeCollectors}</p>
+                        <Truck className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mt-2 text-primary" />
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Recycling Rate</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">Active Collectors</p>
                   </CardContent>
                 </Card>
               </div>
@@ -444,22 +525,22 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
                     <p className="text-xs sm:text-sm text-muted-foreground">Active Routes</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "#0F6E56" }}>{activeRoutes}</p>
-                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-success">+3 from yesterday</p>
+                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{activeRoutes}</p>
+                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">From live route data</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
-                    <p className="text-xs sm:text-sm text-muted-foreground">On-Time Rate</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "#0F6E56" }}>96.4%</p>
-                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-success">Steady performance</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Completion Rate</p>
+                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{collectionRate}%</p>
+                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">From pickup statuses</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Delayed Stops</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold" style={{ color: "#0F6E56" }}>2</p>
-                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-warning">Flagged for review</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">In-Progress Pickups</p>
+                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{inProgressPickups}</p>
+                    <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">Currently assigned</p>
                   </CardContent>
                 </Card>
               </div>
@@ -473,18 +554,20 @@ const AdminDashboard = () => {
                     <div className="relative h-[240px] sm:h-[360px] overflow-hidden rounded-xl border border-[#b8e0d4] bg-[radial-gradient(circle_at_center,_rgba(31,158,117,0.18),_rgba(255,255,255,0.9)_55%)]">
                       <div className="absolute inset-0 opacity-80" style={{ backgroundImage: "linear-gradient(rgba(15,110,86,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(15,110,86,0.12) 1px, transparent 1px)", backgroundSize: "34px 34px" }} />
 
-                      <div className="absolute left-[18%] top-[26%] h-3 w-3 rounded-full bg-[#0F6E56] shadow-lg shadow-[#0F6E56]/50" />
-                      <div className="absolute left-[33%] top-[48%] h-3 w-3 rounded-full bg-[#0F6E56] shadow-lg shadow-[#0F6E56]/50" />
-                      <div className="absolute left-[52%] top-[38%] h-3 w-3 rounded-full bg-[#D97706] shadow-lg shadow-[#D97706]/50" />
-                      <div className="absolute left-[72%] top-[25%] h-3 w-3 rounded-full bg-[#0F6E56] shadow-lg shadow-[#0F6E56]/50" />
-                      <div className="absolute left-[78%] top-[58%] h-3 w-3 rounded-full bg-[#DC2626] shadow-lg shadow-[#DC2626]/50" />
-
-                      <div className="absolute left-[18%] top-[26%] h-[120px] w-[120px] rounded-full border border-dashed border-[#0F6E56]/40" />
-                      <div className="absolute left-[35%] top-[42%] h-[140px] w-[140px] rounded-full border border-dashed border-[#0F6E56]/40" />
+                      <div className="absolute inset-4 grid grid-cols-2 gap-3 content-center">
+                        {allRoutes.slice(0, 4).map((route) => (
+                          <div key={route.id} className="rounded-lg border border-[#b8e0d4] bg-white/80 p-3 text-xs shadow-sm">
+                            <p className="font-medium truncate text-primary">{route.name}</p>
+                            <p className="text-muted-foreground">{route.status} · {route.stops_count} stops</p>
+                          </div>
+                        ))}
+                        {allRoutes.length === 0 && (
+                          <p className="col-span-2 text-center text-sm text-muted-foreground">No routes available.</p>
+                        )}
+                      </div>
 
                       <div className="absolute bottom-4 left-4 rounded-lg border border-[#b8e0d4] bg-white/80 px-3 py-2 text-xs shadow-sm">
-                        <p className="font-medium" style={{ color: "#0F6E56" }}>Sector 3</p>
-                        <p className="text-muted-foreground">Priority route</p>
+                        <p className="font-medium text-primary">{allRoutes.length} routes total</p>
                       </div>
                     </div>
                   </CardContent>
@@ -495,34 +578,196 @@ const AdminDashboard = () => {
                     <CardTitle className="text-base sm:text-lg" style={{ color: "#0F6E56" }}>Collector Status</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {[
-                      { name: "Mike Johnson", zone: "Sector 3", status: "On route", eta: "08 min" },
-                      { name: "Sarah Wilson", zone: "Sector 5", status: "Collecting", eta: "12 min" },
-                      { name: "Tom Wilson", zone: "Sector 7", status: "Delayed", eta: "28 min" },
-                    ].map((collector) => (
-                      <div key={collector.name} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium" style={{ color: "#0F6E56" }}>{collector.name}</p>
-                            <p className="text-xs text-muted-foreground">{collector.zone}</p>
+                    {collectorStatuses.length === 0 ? (
+                      <p className="text-center py-4 text-sm text-muted-foreground">No collectors found.</p>
+                    ) : (
+                      collectorStatuses.map((collector) => (
+                        <div key={collector.name} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-primary">{collector.name}</p>
+                              <p className="text-xs text-muted-foreground">{collector.zone}</p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={collector.status === "On route" ? "border-primary/20 bg-primary/10 text-primary" : collector.status === "On leave" ? "border-warning/20 bg-warning/10 text-warning" : "border-success/20 bg-success/10 text-success"}
+                            >
+                              {collector.status}
+                            </Badge>
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={collector.status === "Delayed" ? "border-[#F59E0B]/30 bg-[#FEF3C7] text-[#B45309]" : collector.status === "Collecting" ? "border-[#1D9E75]/30 bg-[#DCFCE7] text-[#15803D]" : "border-[#0F6E56]/20 bg-[#E1F5EE] text-[#0F6E56]"}
-                          >
-                            {collector.status}
-                          </Badge>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                          <span>ETA</span>
-                          <span className="font-medium" style={{ color: "#0F6E56" }}>{collector.eta}</span>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </CardContent>
                 </Card>
               </div>
             </>
+          )}
+
+          {/* Collection Requests */}
+          {activeTab === "pickups" && (
+            <Card className="border-border/50">
+              <CardHeader className="pb-3 sm:pb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div>
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      Collection Requests
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm mt-1">
+                      View, filter, and assign pickup requests across the system
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={exportPickups}>
+                    <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
+                    Export CSV
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Filters */}
+                <div className="flex flex-col gap-3 mb-4 sm:mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B7280" }} />
+                    <Input
+                      placeholder="Search by address or zone..."
+                      value={pickupSearch}
+                      onChange={(e) => setPickupSearch(e.target.value)}
+                      className="pl-10 bg-white border-border h-11"
+                    />
+                  </div>
+                  <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
+                    {["all", "pending", "in_progress", "completed", "cancelled"].map((s) => (
+                      <Button
+                        key={s}
+                        variant={pickupStatusFilter === s ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPickupStatusFilter(s)}
+                        className={`capitalize text-xs sm:text-sm shrink-0 ${pickupStatusFilter !== s ? "bg-white hover:bg-primary/5" : ""}`}
+                      >
+                        {s === "all" ? "All" : s.replace("_", " ")}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
+                    <Button
+                      variant={pickupZoneFilter === "all" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPickupZoneFilter("all")}
+                      className={`text-xs sm:text-sm shrink-0 ${pickupZoneFilter !== "all" ? "bg-white hover:bg-primary/5" : ""}`}
+                    >
+                      All Zones
+                    </Button>
+                    {pickupZones.map((z) => (
+                      <Button
+                        key={z}
+                        variant={pickupZoneFilter === z ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPickupZoneFilter(z)}
+                        className={`text-xs sm:text-sm shrink-0 ${pickupZoneFilter !== z ? "bg-white hover:bg-primary/5" : ""}`}
+                      >
+                        {z}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pickups Table - Desktop */}
+                <div className="overflow-x-auto scrollbar-hide hidden sm:block">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Request</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Zone</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Waste Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Scheduled</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Priority</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPickups.length === 0 && (
+                        <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">No pickup requests found.</td></tr>
+                      )}
+                      {filteredPickups.map((p) => (
+                        <tr key={p.id} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
+                          <td className="py-3 px-4">
+                            <div>
+                              <p className="font-medium">{p.address || "No address"}</p>
+                              <p className="text-xs text-muted-foreground">#{p.id} · {p.resident_detail ? [p.resident_detail.first_name, p.resident_detail.last_name].filter(Boolean).join(" ") || p.resident_detail.email : `Resident #${p.resident}`}</p>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{p.zone || "-"}</td>
+                          <td className="py-3 px-4 text-sm hidden md:table-cell">{p.waste_type}</td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground hidden lg:table-cell">
+                            {formatDate(p.scheduled_datetime)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge variant="outline" className={pickupStatusConfig[p.status]?.className}>
+                              {pickupStatusConfig[p.status]?.label || p.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 hidden lg:table-cell">
+                            <Badge variant="outline" className={pickupPriorityConfig[p.priority]?.className}>
+                              {pickupPriorityConfig[p.priority]?.label || p.priority}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-end gap-1 sm:gap-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewPickup(p)}>
+                                <Eye className="h-4 w-4" style={{ color: "#0EA5E9" }} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignPickup(p)}>
+                                <UserPlus className="h-4 w-4" style={{ color: "#D97706" }} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pickups Cards - Mobile */}
+                <div className="space-y-3 sm:hidden">
+                  {filteredPickups.length === 0 && (
+                    <p className="py-8 text-center text-sm text-muted-foreground">No pickup requests found.</p>
+                  )}
+                  {filteredPickups.map((p) => (
+                    <div key={p.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{p.address || "No address"}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">#{p.id}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={pickupStatusConfig[p.status]?.className}>
+                            {pickupStatusConfig[p.status]?.label || p.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Badge variant="outline" className={pickupPriorityConfig[p.priority]?.className}>
+                          {pickupPriorityConfig[p.priority]?.label || p.priority}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{p.zone || "No zone"}</span>
+                        <span className="text-xs text-muted-foreground">{p.waste_type}</span>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5" onClick={() => setViewPickup(p)}>
+                          <Eye className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />
+                          <span className="text-xs">Details</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5" onClick={() => setAssignPickup(p)}>
+                          <UserPlus className="h-3.5 w-3.5" style={{ color: "#D97706" }} />
+                          <span className="text-xs">Assign</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* User Management */}
@@ -537,10 +782,16 @@ const AdminDashboard = () => {
                     </CardTitle>
                     
                   </div>
-                  <Button className="gap-2">
-                    <User className="h-4 w-4" />
-                    Add User
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={exportUsers}>
+                      <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
+                      <span className="hidden sm:inline">Export</span>
+                    </Button>
+                    <Button className="gap-2" onClick={() => setCreateCollectorOpen(true)}>
+                      <User className="h-4 w-4" />
+                      Add User
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -552,7 +803,7 @@ const AdminDashboard = () => {
                       placeholder="Search users..." 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 bg-white border-border"
                     />
                   </div>
                   <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -562,7 +813,7 @@ const AdminDashboard = () => {
                         variant={roleFilter === role ? "default" : "outline"}
                         size="sm"
                         onClick={() => setRoleFilter(role)}
-                        className="capitalize text-xs sm:text-sm shrink-0"
+                        className={`capitalize text-xs sm:text-sm shrink-0 ${roleFilter !== role ? "bg-white hover:bg-primary/5" : ""}`}
                       >
                         {role === "all" ? "All Users" : role + "s"}
                       </Button>
@@ -585,11 +836,15 @@ const AdminDashboard = () => {
                     </thead>
                     <tbody>
                       {filteredUsers.map((u) => (
-                        <tr key={u.id} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                        <tr key={u.id} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#0F6E56" }}>
-                                <User className="h-4 w-4" />
+                              <div className="flex h-9 w-9 items-center justify-center">
+                                {u.profile_picture ? (
+                                  <img src={u.profile_picture} alt="" className="h-full w-full rounded-full object-cover" />
+                                ) : (
+                                  <User className="h-4 w-4" style={{ color: "#0F6E56" }} />
+                                )}
                               </div>
                               <div>
                                 <p className="font-medium">{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}</p>
@@ -619,17 +874,17 @@ const AdminDashboard = () => {
                             {allPickups.filter(p => p.collector === u.id || p.resident === u.id).length}
                           </td>
                           <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">
-                            {(() => { try { return format(parseISO(u.date_joined), "yyyy-MM-dd"); } catch { return u.date_joined; } })()}
+                            {formatDate(u.date_joined)}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-end gap-1 sm:gap-2">
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewUser(u)}>
                                 <Eye className="h-4 w-4" style={{ color: "#0EA5E9" }} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditUser(u)}>
                                 <Edit className="h-4 w-4" style={{ color: "#D97706" }} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteUser(u)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -644,26 +899,19 @@ const AdminDashboard = () => {
                 <div className="space-y-3 sm:hidden">
                   {filteredUsers.map((u) => (
                     <div key={u.id} className="rounded-lg border border-[#b8e0d4] bg-[#F6FAFA] p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]/10" style={{ color: "#0F6E56" }}>
-                            <User className="h-4 w-4" />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                            {u.profile_picture ? (
+                              <img src={u.profile_picture} alt="" className="h-full w-full rounded-full object-cover" />
+                            ) : (
+                              <User className="h-4 w-4" style={{ color: "#0F6E56" }} />
+                            )}
                           </div>
-                          <div>
-                            <p className="font-medium" style={{ color: "#0F6E56" }}>{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}</p>
-                            <p className="text-xs text-muted-foreground">{u.email}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.username}</p>
+                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <Eye className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <Edit className="h-3.5 w-3.5" style={{ color: "#D97706" }} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -674,7 +922,21 @@ const AdminDashboard = () => {
                           {statusConfig[u.status as keyof typeof statusConfig].label}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{allPickups.filter(p => p.collector === u.id || p.resident === u.id).length} collections</span>
-                        <span className="text-xs text-muted-foreground">Joined {(() => { try { return format(parseISO(u.date_joined), "yyyy-MM-dd"); } catch { return u.date_joined; } })()}</span>
+                        <span className="text-xs text-muted-foreground">Joined {formatDate(u.date_joined)}</span>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5" onClick={() => setViewUser(u)}>
+                          <Eye className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />
+                          <span className="text-xs">View</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5" onClick={() => setEditUser(u)}>
+                          <Edit className="h-3.5 w-3.5" style={{ color: "#D97706" }} />
+                          <span className="text-xs">Edit</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5 text-destructive hover:text-destructive" onClick={() => setDeleteUser(u)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="text-xs">Delete</span>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -697,7 +959,7 @@ const AdminDashboard = () => {
                       </CardTitle>
                       
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={exportMonthlyReports}>
                       <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
                       Export All
                     </Button>
@@ -718,7 +980,7 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {monthlyReports.map((report, idx) => (
-                          <tr key={idx} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                          <tr key={idx} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#7C3AED" }}>
@@ -751,11 +1013,12 @@ const AdminDashboard = () => {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-end gap-2">
-                                <Button variant="outline" size="sm" className="gap-1">
-                                  <Eye className="h-4 w-4" style={{ color: "#0EA5E9" }} />
-                                  View
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                  openExport(`Report: ${report.period}`, `report-${report.period.replace(/\s+/g, "-").toLowerCase()}`,
+                                    ["Period", "Collections", "Total Weight", "Recycling Rate", "Status"],
+                                    [[report.period, report.totalCollections, report.totalWeight, `${report.recyclingRate}%`, "Completed"]]
+                                  );
+                                }}>
                                   <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
                                 </Button>
                               </div>
@@ -771,11 +1034,15 @@ const AdminDashboard = () => {
               {/* Sector Performance */}
               <Card className="border-border/50">
                 <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                    
-                    Sector Performance
-                  </CardTitle>
-                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                      Sector Performance
+                    </CardTitle>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={exportSectorPerformance}>
+                      <Download className="h-4 w-4" style={{ color: "#2563EB" }} />
+                      Export
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -791,7 +1058,7 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {sectorReports.map((sector) => (
-                          <tr key={sector.sector} className="border-b border-border/50" style={{ transition: "background-color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#E1F5EE"} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                          <tr key={sector.sector} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center" style={{ color: "#E74C3C" }}>
@@ -810,13 +1077,13 @@ const AdminDashboard = () => {
                             <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{sector.weight}</td>
                             <td className="py-3 px-4 hidden sm:table-cell">
                               <div className="flex items-center gap-2">
-                                <div className="w-20 h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#E1F5EE" }}>
+                                <div className="w-20 h-2 rounded-full overflow-hidden bg-primary/10">
                                   <div 
                                     className={`h-full rounded-full ${
                                       sector.efficiency >= 95 ? 'bg-success' : 
                                       sector.efficiency >= 90 ? 'bg-primary' : 'bg-warning'
                                     }`}
-                                    style={{ width: `${sector.efficiency}%` }}
+                                    style={{ width: `${Math.min(sector.efficiency, 100)}%` }}
                                   />
                                 </div>
                                 <span className="text-sm font-medium">{sector.efficiency}%</span>
@@ -846,24 +1113,28 @@ const AdminDashboard = () => {
           }}
           title="Admin Profile"
         >
-          <div className="space-y-6 py-4">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F6E56]">
-                <User className="h-10 w-10 text-white" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
-                  {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
-                </h3>
-                <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
-                <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Administrator</Badge>
+          <div className="py-4">
+            {/* Sticky header */}
+            <div className="sticky top-0 z-10 bg-white pb-4 -mx-2 px-2 -mt-2 pt-2">
+              <div className="flex flex-col items-center gap-4">
+                <ImageUpload
+                  currentImage={user?.profile_picture}
+                  onUploadSuccess={(url) => updateUser({ profile_picture: url })}
+                />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                    {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : displayName}
+                  </h3>
+                  <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
+                  <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Administrator</Badge>
+                </div>
               </div>
             </div>
 
             <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
+                <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "-"}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: "#444441" }}>Department</span>
@@ -932,7 +1203,7 @@ const AdminDashboard = () => {
             <div className="space-y-3">
               <h4 className="font-medium" style={{ color: "#0F6E56" }}>Account</h4>
               <div className="flex gap-3">
-                <Button variant="outline" size="sm">Change Password</Button>
+                <Button variant="outline" size="sm" onClick={() => { setSettingsOpen(false); navigate("/change-password"); }}>Change Password</Button>
                 <Button variant="outline" size="sm" className="text-[#dc2626] hover:text-[#dc2626]">Delete Account</Button>
               </div>
             </div>
@@ -950,6 +1221,116 @@ const AdminDashboard = () => {
             </Button>
           </DialogFooter>
         </DashboardDialog>
+
+        {/* User Management Dialogs */}
+        <CreateCollectorDialog open={createCollectorOpen} onOpenChange={setCreateCollectorOpen} />
+        <ViewUserDialog open={viewUser !== null} onOpenChange={(open) => { if (!open) setViewUser(null); }} user={viewUser} />
+        <EditUserDialog open={editUser !== null} onOpenChange={(open) => { if (!open) setEditUser(null); }} user={editUser} />
+        <DeleteUserDialog open={deleteUser !== null} onOpenChange={(open) => { if (!open) setDeleteUser(null); }} user={deleteUser} />
+
+        {/* View Pickup Detail Dialog */}
+        <DashboardDialog open={viewPickup !== null} onOpenChange={(open) => { if (!open) setViewPickup(null); }} title="Pickup Details">
+          {viewPickup && (
+            <div className="py-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className={pickupStatusConfig[viewPickup.status]?.className}>
+                  {pickupStatusConfig[viewPickup.status]?.label}
+                </Badge>
+                <Badge variant="outline" className={pickupPriorityConfig[viewPickup.priority]?.className}>
+                  {pickupPriorityConfig[viewPickup.priority]?.label}
+                </Badge>
+              </div>
+              <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Address</span>
+                  <span className="text-sm font-medium text-right max-w-[60%]">{viewPickup.address || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Zone</span>
+                  <span className="text-sm font-medium">{viewPickup.zone || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Waste Type</span>
+                  <span className="text-sm font-medium">{viewPickup.waste_type}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Scheduled</span>
+                  <span className="text-sm font-medium">{formatDate(viewPickup.scheduled_datetime)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Resident</span>
+                  <span className="text-sm font-medium">
+                    {viewPickup.resident_detail ? [viewPickup.resident_detail.first_name, viewPickup.resident_detail.last_name].filter(Boolean).join(" ") || viewPickup.resident_detail.email : `#${viewPickup.resident}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Collector</span>
+                  <span className="text-sm font-medium">
+                    {viewPickup.collector_detail ? [viewPickup.collector_detail.first_name, viewPickup.collector_detail.last_name].filter(Boolean).join(" ") || viewPickup.collector_detail.email : "Unassigned"}
+                  </span>
+                </div>
+                {viewPickup.route && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Route</span>
+                    <span className="text-sm font-medium">#{viewPickup.route}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Est. Weight</span>
+                  <span className="text-sm font-medium">{viewPickup.estimated_weight_kg ? `${viewPickup.estimated_weight_kg} kg` : "-"}</span>
+                </div>
+                {viewPickup.actual_weight_kg && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Actual Weight</span>
+                    <span className="text-sm font-medium">{viewPickup.actual_weight_kg} kg</span>
+                  </div>
+                )}
+                {viewPickup.notes && (
+                  <div className="border-t pt-3" style={{ borderColor: "#b8e0d4" }}>
+                    <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                    <p className="text-sm">{viewPickup.notes}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setViewPickup(null); setAssignPickup(viewPickup); }}>Assign</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setViewPickup(null)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DashboardDialog>
+
+        {/* Assign Pickup Dialog */}
+        <DashboardDialog open={assignPickup !== null} onOpenChange={(open) => { if (!open) setAssignPickup(null); }} title="Assign Pickup">
+          {assignPickup && (
+            <AssignPickupContent
+              pickup={assignPickup}
+              collectors={collectors}
+              routes={routes}
+              onAssign={(collectorId, routeId) => {
+                updatePickupMutation.mutate(
+                  { id: assignPickup.id, data: { collector: collectorId, route: routeId } },
+                  {
+                    onSuccess: () => {
+                      toast.success("Pickup assigned successfully.");
+                      setAssignPickup(null);
+                    },
+                    onError: (err: Error) => toast.error(err.message || "Failed to assign pickup."),
+                  }
+                );
+              }}
+              onCancel={() => setAssignPickup(null)}
+              isPending={updatePickupMutation.isPending}
+            />
+          )}
+        </DashboardDialog>
+
+        {/* Export Preview Dialog */}
+        <ExportPreviewDialog
+          open={exportPreview !== null}
+          onOpenChange={(open) => { if (!open) setExportPreview(null); }}
+          data={exportPreview}
+        />
       </main>
     </div>
   );

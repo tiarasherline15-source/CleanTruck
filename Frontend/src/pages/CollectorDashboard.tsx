@@ -19,15 +19,12 @@ import {
   Loader2, AlertCircle
 } from "lucide-react";
 import { useCollectorPickups, useRoutes, useCollectionHistory, useUpdatePickupRequest, useUpdateRoute, useNotifications } from "@/hooks/useApi";
+import ImageUpload from "@/components/ui/ImageUpload";
+import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
-import type { PickupRequest, Route as RouteType, CollectionHistory, PaginatedResponse } from "@/lib/types";
-
-function normalizeList<T>(data: PaginatedResponse<T> | T[] | undefined): T[] {
-  if (!data) return [];
-  return Array.isArray(data) ? data : data.results;
-}
+import type { PickupRequest, Route as RouteType, CollectionHistory } from "@/lib/types";
+import { normalizeList, formatDate, formatTime, formatMonth } from "@/lib/normalize";
 
 const priorityConfig = {
   high: { label: "High", className: "bg-destructive/10 text-destructive border-destructive/20" },
@@ -43,7 +40,7 @@ const wasteTypeIcons: Record<string, string> = {
 };
 
 const CollectorDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const { data: pickupsData, isLoading: pickupsLoading, isError: pickupsError, error: pickupsErr } = useCollectorPickups();
   const { data: routesData, isLoading: routesLoading, isError: routesError, error: routesErr } = useRoutes();
@@ -66,12 +63,7 @@ const CollectorDashboard = () => {
   const hasError = pickupsError || routesError || historyError;
   const errorMsg = pickupsErr?.message || routesErr?.message || historyErr?.message;
 
-  const formatTime = (iso: string) => {
-    try { return format(parseISO(iso), "hh:mm a"); } catch { return iso; }
-  };
-  const formatDate = (iso: string) => {
-    try { return format(parseISO(iso), "yyyy-MM-dd"); } catch { return iso; }
-  };
+
 
   const getResidentName = (pickup: PickupRequest) => {
     if (pickup.resident_detail) {
@@ -82,7 +74,7 @@ const CollectorDashboard = () => {
   };
 
   const getResidentPhone = (pickup: PickupRequest) => {
-    return pickup.resident_detail?.phone || "—";
+    return pickup.resident_detail?.phone || "-";
   };
 
   const completedPickups = pickups.filter(p => p.status === "completed").length;
@@ -139,7 +131,7 @@ const CollectorDashboard = () => {
 
   const handleRouteCardAction = (route: RouteType) => {
     if (route.status === "active") {
-      toast.info(`View map for "${route.name}" — coming soon!`);
+      toast.info(`View map for "${route.name}" - coming soon!`);
     } else {
       updateRouteMutation.mutate(
         { id: route.id, data: { status: "active" } },
@@ -241,8 +233,12 @@ const CollectorDashboard = () => {
               onClick={() => setProfileOpen(true)}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-[#E1F5EE] transition-colors cursor-pointer"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F6E56]">
-                <User className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden bg-[#0F6E56]">
+                {user?.profile_picture ? (
+                  <img src={user.profile_picture} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-5 w-5 text-white" />
+                )}
               </div>
               <span className="text-sm font-medium hidden sm:block" style={{ color: "#0F6E56" }}>{user?.first_name || user?.username || "Collector"}</span>
             </button>
@@ -250,11 +246,7 @@ const CollectorDashboard = () => {
         </header>
 
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#0F6E56" }} />
-            </div>
-          )}
+          {isLoading && <DashboardFullSkeleton />}
           {hasError && !isLoading && (
             <Card className="border-red-200 bg-red-50">
               <CardContent className="flex items-center gap-3 py-6">
@@ -369,7 +361,7 @@ const CollectorDashboard = () => {
                               </span>
                               <span className="flex items-center gap-1" style={{ color: "#444441" }}>
                                 <Package className="h-3.5 w-3.5 shrink-0" />
-                                ~{pickup.estimated_weight_kg ? `${pickup.estimated_weight_kg} kg` : "—"}
+                                ~{pickup.estimated_weight_kg ? `${pickup.estimated_weight_kg} kg` : "-"}
                               </span>
                             </div>
                           </div>
@@ -443,11 +435,11 @@ const CollectorDashboard = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <Navigation className="h-3.5 w-3.5 shrink-0" />
-                              {route.distance_km ? `${route.distance_km} km` : "—"}
+                              {route.distance_km ? `${route.distance_km} km` : "-"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Timer className="h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
-                              {route.estimated_duration || "—"}
+                              {route.estimated_duration || "-"}
                             </span>
                           </div>
                         </div>
@@ -506,12 +498,12 @@ const CollectorDashboard = () => {
                               <span className="font-medium" style={{ color: "#0F6E56" }}>{formatDate(record.completed_at)}</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.route ? `Route #${record.route}` : "—"}</td>
+                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.route ? `Route #${record.route}` : "-"}</td>
                           <td className="py-3 px-4">
                             <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56]">1 pickup</Badge>
                           </td>
-                          <td className="py-3 px-4 font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "—"}</td>
-                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.duration || "—"}</td>
+                          <td className="py-3 px-4 font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "-"}</td>
+                          <td className="py-3 px-4" style={{ color: "#444441" }}>{record.duration || "-"}</td>
                         </tr>
                       ))}
                       {history.length === 0 && (
@@ -533,10 +525,10 @@ const CollectorDashboard = () => {
                         <Badge variant="outline" className="border-[#b8e0d4] bg-[#9FE1CB] text-[#0F6E56] text-xs">1 pickup</Badge>
                       </div>
                       <div className="flex items-center justify-between mt-2 text-xs" style={{ color: "#444441" }}>
-                        <span>Route: {record.route ? `#${record.route}` : "—"}</span>
-                        <span className="font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "—"}</span>
+                        <span>Route: {record.route ? `#${record.route}` : "-"}</span>
+                        <span className="font-medium" style={{ color: "#0F6E56" }}>{record.weight_kg ? `${record.weight_kg} kg` : "-"}</span>
                       </div>
-                      <div className="text-xs mt-1" style={{ color: "#444441" }}>Duration: {record.duration || "—"}</div>
+                      <div className="text-xs mt-1" style={{ color: "#444441" }}>Duration: {record.duration || "-"}</div>
                     </div>
                   ))}
                 </div>
@@ -587,7 +579,7 @@ const CollectorDashboard = () => {
           <div className="space-y-3">
             <h4 className="font-medium" style={{ color: "#0F6E56" }}>Account</h4>
             <div className="flex gap-3">
-              <Button variant="outline" size="sm">Change Password</Button>
+              <Button variant="outline" size="sm" onClick={() => { setSettingsOpen(false); navigate("/change-password"); }}>Change Password</Button>
               <Button variant="outline" size="sm" className="text-[#dc2626] hover:text-[#dc2626]">Delete Account</Button>
             </div>
           </div>
@@ -615,33 +607,37 @@ const CollectorDashboard = () => {
         }}
         title="User Profile"
       >
-        <div className="space-y-6 py-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F6E56]">
-              <User className="h-10 w-10 text-white" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
-                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.first_name || user?.username || "Collector"}
-              </h3>
-              <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
-              <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
+        <div className="py-4">
+          {/* Sticky header */}
+          <div className="sticky top-0 z-10 bg-white pb-4 -mx-2 px-2 -mt-2 pt-2">
+            <div className="flex flex-col items-center gap-4">
+              <ImageUpload
+                currentImage={user?.profile_picture}
+                onUploadSuccess={(url) => updateUser({ profile_picture: url })}
+              />
+              <div className="text-center">
+                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                  {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.first_name || user?.username || "Collector"}
+                </h3>
+                <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
+                <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
+              </div>
             </div>
           </div>
 
           <div className="space-y-3 border-t pt-4" style={{ borderColor: "#b8e0d4" }}>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Phone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "—"}</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.phone || "-"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Zone</span>
-              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.zone || "—"}</span>
+              <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>{user?.zone || "-"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm" style={{ color: "#444441" }}>Member Since</span>
               <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>
-                {user?.date_joined ? (() => { try { return format(parseISO(user.date_joined), "MMMM yyyy"); } catch { return user.date_joined; } })() : "—"}
+                {user?.date_joined ? formatMonth(user.date_joined) : "-"}
               </span>
             </div>
             <div className="flex items-center justify-between">
