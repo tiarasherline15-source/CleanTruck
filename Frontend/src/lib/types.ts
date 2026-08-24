@@ -27,6 +27,7 @@ export interface PickupRequest {
   scheduled_datetime: string;
   status: "pending" | "in_progress" | "completed" | "cancelled";
   priority: "high" | "normal" | "low";
+  location: { lat?: number; lng?: number };
   notes: string;
   estimated_weight_kg: number | null;
   actual_weight_kg: number | null;
@@ -45,8 +46,23 @@ export interface Route {
   distance_km: number | null;
   estimated_duration: string | null;
   status: "active" | "upcoming" | "completed";
+  waypoints: Array<{ lat: number; lng: number }>;
+  stops: RouteStop[];
   created_at: string;
   updated_at: string;
+}
+
+export interface RouteStop {
+  id: number;
+  route: number;
+  stop_number: number;
+  address: string;
+  zone: number | null;
+  arrival_time: string | null;
+  departure_time: string | null;
+  status: "pending" | "in_progress" | "completed" | "cancelled";
+  pickup_requests: number[];
+  location: { lat?: number; lng?: number };
 }
 
 // Collection History

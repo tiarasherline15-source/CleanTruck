@@ -3,7 +3,8 @@ Django signals for CleanTruck app - auto-send emails and notifications
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import PickupRequest, User, UserSettings
+from django.utils import timezone
+from .models import PickupRequest, CollectionHistory, User, UserSettings
 from .utils_email import (
     send_pickup_scheduled_email, 
     send_pickup_confirmed_email,
@@ -27,6 +28,17 @@ def send_pickup_email(sender, instance, created, **kwargs):
         elif instance.status == 'completed':
             # Pickup completed
             send_pickup_completed_email(instance.resident, instance)
+            # Create collection history record
+            CollectionHistory.objects.get_or_create(
+                pickup_request=instance,
+                defaults={
+                    'collector': instance.collector,
+                    'route': instance.route,
+                    'completed_at': timezone.now(),
+                    'weight_kg': instance.actual_weight_kg,
+                    'notes': instance.notes,
+                },
+            )
 
 
 @receiver(post_save, sender=User)

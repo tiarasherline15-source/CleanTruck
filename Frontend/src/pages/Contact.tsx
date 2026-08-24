@@ -135,7 +135,7 @@ const Contact = () => {
                         +254 700 123 456
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Mon – Fri, 8 AM – 6 PM
+                        Mon - Fri, 8 AM - 6 PM
                       </p>
                     </div>
                   </CardContent>

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const ChangePassword = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
   const mustChange = user?.must_change_password === true;
   const [currentPassword, setCurrentPassword] = useState("");
@@ -40,8 +40,14 @@ const ChangePassword = () => {
       const updatedUser = await api.post<typeof user>("/users/me/change-password/", payload);
       if (updatedUser) updateUser(updatedUser);
       toast.success("Password changed successfully.");
-      const roleRedirect: Record<string, string> = { admin: "/admin", collector: "/collector", resident: "/dashboard" };
-      navigate(roleRedirect[user?.role || "resident"], { replace: true });
+      if (mustChange) {
+        toast.info("Please sign in with your new password.");
+        logout();
+        navigate("/login", { replace: true });
+      } else {
+        const roleRedirect: Record<string, string> = { admin: "/admin", collector: "/collector", resident: "/dashboard" };
+        navigate(roleRedirect[user?.role || "resident"], { replace: true });
+      }
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Unable to change password.");
     } finally {

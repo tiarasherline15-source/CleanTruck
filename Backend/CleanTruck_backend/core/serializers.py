@@ -312,6 +312,13 @@ class PickupRequestSerializer(serializers.ModelSerializer):
     resident_detail = UserSerializer(source="resident", read_only=True)
     collector_detail = UserSerializer(source="collector", read_only=True)
 
+    def get_extra_kwargs(self):
+        extra_kwargs = super().get_extra_kwargs()
+        request = self.context.get("request")
+        if not request or getattr(request.user, "role", None) != "admin":
+            extra_kwargs["collector"] = {"read_only": True}
+        return extra_kwargs
+
     class Meta:
         model = PickupRequest
         fields = [
@@ -334,7 +341,7 @@ class PickupRequestSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "resident", "created_at", "updated_at"]
 
 
 class CollectionHistorySerializer(serializers.ModelSerializer):

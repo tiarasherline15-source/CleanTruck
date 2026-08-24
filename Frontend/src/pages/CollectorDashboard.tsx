@@ -16,9 +16,10 @@ import {
   CheckCircle2, LogOut, User,
   Home, Route, History, Settings, Navigation,
   Package, Timer, Phone, Play, Pause, Check, Bell,
-  Loader2, AlertCircle
+  Loader2, AlertCircle, ChevronDown, ChevronUp
 } from "lucide-react";
-import { useCollectorPickups, useRoutes, useCollectionHistory, useUpdatePickupRequest, useUpdateRoute, useNotifications } from "@/hooks/useApi";
+import { useCollectorPickups, useRoutes, useCollectionHistory, useUpdatePickupRequest, useUpdateRoute, useUpdateRouteStop, useNotifications } from "@/hooks/useApi";
+import LeafletMap from "@/components/LeafletMap";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +55,7 @@ const CollectorDashboard = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [expandedRoute, setExpandedRoute] = useState<number | null>(null);
 
   const pickups = normalizeList<PickupRequest>(pickupsData);
   const routes = normalizeList<RouteType>(routesData);
@@ -129,9 +131,11 @@ const CollectorDashboard = () => {
     );
   };
 
+  const updateStopMutation = useUpdateRouteStop();
+
   const handleRouteCardAction = (route: RouteType) => {
     if (route.status === "active") {
-      toast.info(`View map for "${route.name}" - coming soon!`);
+      setExpandedRoute(expandedRoute === route.id ? null : route.id);
     } else {
       updateRouteMutation.mutate(
         { id: route.id, data: { status: "active" } },
@@ -141,6 +145,32 @@ const CollectorDashboard = () => {
         },
       );
     }
+  };
+
+  const handleCompleteRoute = () => {
+    if (!activeRoute) return;
+    updateRouteMutation.mutate(
+      { id: activeRoute.id, data: { status: "completed" } },
+      {
+        onSuccess: () => toast.success(`Route "${activeRoute.name}" completed!`),
+        onError: (err: Error) => toast.error(err.message || "Failed to complete route."),
+      },
+    );
+  };
+
+  const handleCompleteStop = (stop: import("@/lib/types").RouteStop) => {
+    updateStopMutation.mutate(
+      { id: stop.id, data: { status: "completed" } },
+      {
+        onSuccess: () => toast.success(`Stop #${stop.stop_number} completed!`),
+        onError: (err: Error) => toast.error(err.message || "Failed to update stop."),
+      },
+    );
+  };
+
+  const handleNavigate = (pickup: PickupRequest) => {
+    const addr = encodeURIComponent(pickup.address);
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, "_blank");
   };
 
   const handleSidebarClick = (tab: string) => {
@@ -281,26 +311,50 @@ const CollectorDashboard = () => {
               </div>
 
               {/* Route Progress Banner */}
-              {isRouteActive && (
+              {isRouteActive && activeRoute && (
                 <Card className="border-success/30 bg-success/5">
-                  <CardContent className="flex items-center justify-between p-3 sm:p-4">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center animate-pulse shrink-0" style={{ color: "#0F6E56" }}>
-                        <Navigation className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <CardContent className="p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center animate-pulse shrink-0" style={{ color: "#0F6E56" }}>
+                          <Navigation className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm sm:text-base text-success">Route Active</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">{activeRoute.name}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm sm:text-base text-success">Route Active</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground">{activeRoute?.name || "Active Route"}</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg sm:text-2xl font-bold">{completedPickups}/{pickups.length}</p>
+                        <p className="text-[11px] sm:text-sm text-muted-foreground">Pickups Done</p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-lg sm:text-2xl font-bold">{completedPickups}/{pickups.length}</p>
-                      <p className="text-[11px] sm:text-sm text-muted-foreground">Pickups Completed</p>
-                    </div>
-                  </CardContent>
-                  <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                     <Progress value={progressPercentage} className="h-2" />
-                  </div>
+                    {activeRoute.stops && activeRoute.stops.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Route Stops ({activeRoute.stops.filter(s => s.status === "completed").length}/{activeRoute.stops.length})</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {activeRoute.stops.map((stop) => (
+                            <span
+                              key={stop.id}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                                stop.status === "completed"
+                                  ? "bg-[#9FE1CB] text-[#0F6E56] border-[#0F6E56]/20"
+                                  : stop.status === "in_progress"
+                                    ? "bg-[#FEF3C7] text-[#92400E] border-[#D97706]/20"
+                                    : "bg-white text-[#444441] border-[#b8e0d4]"
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${
+                                stop.status === "completed" ? "bg-[#0F6E56]" : stop.status === "in_progress" ? "bg-[#D97706]" : "bg-[#b8e0d4]"
+                              }`} />
+                              #{stop.stop_number}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
                 </Card>
               )}
 
@@ -367,10 +421,14 @@ const CollectorDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 self-end sm:self-auto sm:shrink-0">
-                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9">
+                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => {
+                            const phone = getResidentPhone(pickup);
+                            if (phone && phone !== "-") window.open(`tel:${phone}`);
+                            else toast.error("No phone number available.");
+                          }}>
                             <Phone className="h-4 w-4" style={{ color: "#2563EB" }} />
                           </Button>
-                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9">
+                          <Button size="icon" variant="outline" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => handleNavigate(pickup)}>
                             <Navigation className="h-4 w-4" style={{ color: "#0EA5E9" }} />
                           </Button>
                           {pickup.status !== "completed" && (
@@ -394,73 +452,209 @@ const CollectorDashboard = () => {
 
           {/* ROUTE MANAGEMENT TAB */}
           {!isLoading && activeTab === "routes" && (
-            <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
-              <CardHeader className="pb-3 sm:pb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
-                      
-                      Route Management
-                    </CardTitle>
-                    
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">                {routes.map((route) => (
-                  <div 
-                    key={route.id} 
-                    className={`p-3 sm:p-5 rounded-xl border transition-all ${
-                      route.status === "active"
-                        ? "border-[#b8e0d4]"
-                        : "bg-[#E1F5EE]/50 hover:border-primary/30"
-                    }`}
-                    style={route.status === "active" ? { backgroundColor: "#E1F5EE", borderColor: "#b8e0d4" } : undefined}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center shrink-0" style={{ color: route.status === "active" ? "#ffffff" : "#444441" }}>
-                          <Route className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{route.name}</p>
-                            {route.status === "active" && (
-                              <Badge className="bg-[#9FE1CB] text-[#0F6E56]">Active</Badge>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm" style={{ color: "#444441" }}>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5 shrink-0" />
-                              {route.stops_count} stops
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Navigation className="h-3.5 w-3.5 shrink-0" />
-                              {route.distance_km ? `${route.distance_km} km` : "-"}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Timer className="h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
-                              {route.estimated_duration || "-"}
-                            </span>
-                          </div>
-                        </div>
+            <div className="space-y-4">
+              {/* Active Route Map */}
+              {isRouteActive && activeRoute && (
+                <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                          <Navigation className="h-5 w-5" />
+                          {activeRoute.name}
+                          <Badge className="bg-[#9FE1CB] text-[#0F6E56]">Active</Badge>
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          {activeRoute.distance_km ? `${activeRoute.distance_km} km` : ""}{activeRoute.distance_km && activeRoute.estimated_duration ? " · " : ""}{activeRoute.estimated_duration || ""}
+                        </CardDescription>
                       </div>
                       <Button
-                        variant={route.status === "active" ? "secondary" : "outline"}
                         size="sm"
-                        className={`w-full sm:w-auto ${route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}`}
-                        onClick={() => handleRouteCardAction(route)}
+                        className="gap-2 bg-[#DC2626] text-white hover:bg-[#B91C1C]"
+                        onClick={handleCompleteRoute}
                         disabled={updateRouteMutation.isPending}
                       >
-                        {route.status === "active" ? "View Map" : "Start Route"}
+                        {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        <span className="hidden sm:inline">Complete Route</span>
                       </Button>
                     </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Map */}
+                    <LeafletMap
+                      markers={[
+                        // Route stop locations
+                        ...(activeRoute.stops
+                          ?.filter((s) => s.location?.lat && s.location?.lng)
+                          .map((s) => ({
+                            lat: s.location.lat!,
+                            lng: s.location.lng!,
+                            label: `Stop #${s.stop_number}: ${s.address}`,
+                            status: s.status === "completed" ? "completed" as const : s.status === "in_progress" ? "active" as const : s.status === "cancelled" ? "delayed" as const : "pending" as const,
+                          })) || []),
+                        // Pickup request locations
+                        ...pickups
+                          .filter((p) => p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng))
+                          .map((p) => {
+                            const statusMap: Record<string, "active" | "completed" | "pending" | "delayed"> = {
+                              in_progress: "active",
+                              completed: "completed",
+                              cancelled: "delayed",
+                              pending: "pending",
+                            };
+                            return {
+                              lat: p.location.lat!,
+                              lng: p.location.lng!,
+                              label: `${p.address || "Pickup #" + p.id} (${p.waste_type})`,
+                              status: statusMap[p.status] || "pending" as const,
+                            };
+                          }),
+                      ]}
+                      center={activeRoute.waypoints && activeRoute.waypoints.length > 0 ? [activeRoute.waypoints[0].lat, activeRoute.waypoints[0].lng] : undefined}
+                      className="h-[280px] sm:h-[360px]"
+                    />
+
+                    {/* Stops List */}
+                    {activeRoute.stops && activeRoute.stops.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold" style={{ color: "#0F6E56" }}>
+                          Stops ({activeRoute.stops.filter(s => s.status === "completed").length}/{activeRoute.stops.length} completed)
+                        </p>
+                        <div className="space-y-2">
+                          {[...activeRoute.stops].sort((a, b) => a.stop_number - b.stop_number).map((stop) => (
+                            <div
+                              key={stop.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                                stop.status === "completed"
+                                  ? "bg-[#9FE1CB]/30 border-[#0F6E56]/20"
+                                  : stop.status === "in_progress"
+                                    ? "bg-[#FEF3C7]/50 border-[#D97706]/30"
+                                    : "bg-white border-[#b8e0d4]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                                  stop.status === "completed"
+                                    ? "bg-[#0F6E56] text-white"
+                                    : stop.status === "in_progress"
+                                      ? "bg-[#D97706] text-white"
+                                      : "bg-[#b8e0d4] text-[#444441]"
+                                }`}>
+                                  {stop.status === "completed" ? <Check className="h-4 w-4" /> : stop.stop_number}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate" style={{ color: "#0F6E56" }}>{stop.address}</p>
+                                  <div className="flex items-center gap-2 text-xs" style={{ color: "#444441" }}>
+                                    {stop.arrival_time && <span>Arrived: {formatTime(stop.arrival_time)}</span>}
+                                    {stop.departure_time && <span>· Left: {formatTime(stop.departure_time)}</span>}
+                                    {stop.pickup_requests && stop.pickup_requests.length > 0 && (
+                                      <span>· {stop.pickup_requests.length} pickup{stop.pickup_requests.length > 1 ? "s" : ""}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {stop.status === "completed" && (
+                                  <Badge className="bg-[#9FE1CB] text-[#0F6E56] text-xs">Done</Badge>
+                                )}
+                                {stop.status !== "completed" && stop.status !== "cancelled" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1 text-xs h-7 border-[#b8e0d4] hover:bg-[#1D9E75] hover:text-white"
+                                    onClick={() => handleCompleteStop(stop)}
+                                    disabled={updateStopMutation.isPending}
+                                  >
+                                    <Check className="h-3 w-3" />
+                                    Complete
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* All Routes List */}
+              <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2" style={{ color: "#0F6E56" }}>
+                        <Route className="h-5 w-5" />
+                        All Routes
+                      </CardTitle>
+                      <CardDescription className="mt-1">{routes.length} route{routes.length !== 1 ? "s" : ""} assigned</CardDescription>
+                    </div>
                   </div>
-                ))}
-                {routes.length === 0 && (
-                  <p className="text-center py-8" style={{ color: "#444441" }}>No routes assigned.</p>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="space-y-3 sm:space-y-4">
+                  {routes.map((route) => (
+                    <div
+                      key={route.id}
+                      className={`p-3 sm:p-5 rounded-xl border transition-all ${
+                        route.status === "active"
+                          ? "border-[#b8e0d4]"
+                          : "bg-[#E1F5EE]/50 hover:border-primary/30"
+                      }`}
+                      style={route.status === "active" ? { backgroundColor: "#E1F5EE", borderColor: "#b8e0d4" } : undefined}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center shrink-0 rounded-lg" style={{ backgroundColor: route.status === "active" ? "#0F6E56" : "#b8e0d4" }}>
+                            <Route className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: route.status === "active" ? "#ffffff" : "#444441" }} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm sm:text-base" style={{ color: "#0F6E56" }}>{route.name}</p>
+                              <Badge className={
+                                route.status === "active" ? "bg-[#9FE1CB] text-[#0F6E56]" :
+                                route.status === "completed" ? "bg-[#E1F5EE] text-[#6B9E8A]" :
+                                "bg-white text-[#444441] border border-[#b8e0d4]"
+                              }>{route.status === "upcoming" ? "Upcoming" : route.status === "active" ? "Active" : "Completed"}</Badge>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm" style={{ color: "#444441" }}>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                {route.stops_count} stops
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Navigation className="h-3.5 w-3.5 shrink-0" />
+                                {route.distance_km ? `${route.distance_km} km` : "-"}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Timer className="h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
+                                {route.estimated_duration || "-"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant={route.status === "active" ? "secondary" : "outline"}
+                          size="sm"
+                          className={`w-full sm:w-auto ${route.status === "active" ? "bg-[#1D9E75] text-white hover:bg-[#0F6E56]" : ""}`}
+                          onClick={() => handleRouteCardAction(route)}
+                          disabled={updateRouteMutation.isPending}
+                        >
+                          {route.status === "active" ? (
+                            <>{expandedRoute === route.id ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}View Details</>
+                          ) : (
+                            "Start Route"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {routes.length === 0 && (
+                    <p className="text-center py-8" style={{ color: "#444441" }}>No routes assigned.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* COLLECTION HISTORY TAB */}
@@ -474,7 +668,20 @@ const CollectorDashboard = () => {
                   </CardTitle>
                   
                 </div>
-                <Button variant="outline" size="sm">Export Report</Button>
+                <Button variant="outline" size="sm" onClick={() => {
+                  const headers = ["Date", "Route", "Weight", "Duration"];
+                  const rows = history.map((r) => [formatDate(r.completed_at), r.route ? `Route #${r.route}` : "-", r.weight_kg ? `${r.weight_kg} kg` : "-", r.duration || "-"]);
+                  // Simple CSV export
+                  const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `collection-history-${new Date().toISOString().split("T")[0]}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Report exported!");
+                }}>Export Report</Button>
               </CardHeader>
               <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 {/* Desktop Table */}
@@ -590,6 +797,7 @@ const CollectorDashboard = () => {
             setActiveTab("overview");
           }}>Cancel</Button>
           <Button className="flex-1 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={() => {
+            toast.success("Settings saved!");
             setSettingsOpen(false);
             setActiveTab("overview");
           }}>
@@ -607,21 +815,18 @@ const CollectorDashboard = () => {
         }}
         title="User Profile"
       >
-        <div className="py-4">
-          {/* Sticky header */}
-          <div className="sticky top-0 z-10 bg-white pb-4 -mx-2 px-2 -mt-2 pt-2">
-            <div className="flex flex-col items-center gap-4">
-              <ImageUpload
-                currentImage={user?.profile_picture}
-                onUploadSuccess={(url) => updateUser({ profile_picture: url })}
-              />
-              <div className="text-center">
-                <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
-                  {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.first_name || user?.username || "Collector"}
-                </h3>
-                <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
-                <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
-              </div>
+        <div className="py-4 space-y-4">
+          <div className="flex flex-col items-center gap-4">
+            <ImageUpload
+              currentImage={user?.profile_picture}
+              onUploadSuccess={(url) => updateUser({ profile_picture: url })}
+            />
+            <div className="text-center">
+              <h3 className="text-lg font-semibold" style={{ color: "#0F6E56" }}>
+                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.first_name || user?.username || "Collector"}
+              </h3>
+              <p className="text-sm" style={{ color: "#444441" }}>{user?.email || ""}</p>
+              <Badge variant="secondary" className="mt-2 bg-[#E1F5EE] text-[#0F6E56]">Collector</Badge>
             </div>
           </div>
 

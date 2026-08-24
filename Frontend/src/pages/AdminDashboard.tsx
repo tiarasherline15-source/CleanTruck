@@ -22,6 +22,7 @@ import EditUserDialog from "@/components/EditUserDialog";
 import DeleteUserDialog from "@/components/DeleteUserDialog";
 import AssignPickupContent from "@/components/AssignPickupDialog";
 import ExportPreviewDialog, { type ExportPreviewData } from "@/components/ExportPreviewDialog";
+import LeafletMap from "@/components/LeafletMap";
 import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -104,12 +105,14 @@ const AdminDashboard = () => {
     return matchesSearch && matchesRole;
   });
 
+  const normalizeZone = (z: string) => z.toLowerCase().replace(/[\s_-]+/g, "_");
+
   const filteredPickups = allPickups.filter(p => {
     const matchesSearch = pickupSearch === "" ||
       p.address.toLowerCase().includes(pickupSearch.toLowerCase()) ||
       (p.zone && p.zone.toLowerCase().includes(pickupSearch.toLowerCase()));
     const matchesStatus = pickupStatusFilter === "all" || p.status === pickupStatusFilter;
-    const matchesZone = pickupZoneFilter === "all" || p.zone === pickupZoneFilter;
+    const matchesZone = pickupZoneFilter === "all" || (p.zone && normalizeZone(p.zone) === normalizeZone(pickupZoneFilter));
     return matchesSearch && matchesStatus && matchesZone;
   });
 
@@ -249,6 +252,46 @@ const AdminDashboard = () => {
       zone: collector.zone || "Unassigned",
       status: activeRouteCollectorIds.has(collector.id) ? "On route" : collector.status === "on_leave" ? "On leave" : "Available",
     }));
+
+  const routeMarkers = [
+    // Route waypoints
+    ...allRoutes.flatMap((route) => {
+      const waypointMarkers = route.waypoints
+        .filter((waypoint) => Number.isFinite(waypoint.lat) && Number.isFinite(waypoint.lng))
+        .map((waypoint, index) => ({
+          lat: waypoint.lat,
+          lng: waypoint.lng,
+          label: `${route.name} waypoint ${index + 1}`,
+          status: route.status === "active" ? "active" as const : route.status === "completed" ? "completed" as const : "pending" as const,
+        }));
+      const stopMarkers = route.stops
+        .filter((stop) => Number.isFinite(stop.location?.lat) && Number.isFinite(stop.location?.lng))
+        .map((stop) => ({
+          lat: stop.location.lat!,
+          lng: stop.location.lng!,
+          label: `${route.name} stop ${stop.stop_number}: ${stop.address}`,
+          status: stop.status === "in_progress" ? "active" as const : stop.status === "completed" ? "completed" as const : stop.status === "cancelled" ? "delayed" as const : "pending" as const,
+        }));
+      return [...waypointMarkers, ...stopMarkers];
+    }),
+    // Pickup request locations (from all pickups with coordinates)
+    ...allPickups
+      .filter((p) => p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng))
+      .map((p) => {
+        const statusMap: Record<string, "active" | "completed" | "pending" | "delayed"> = {
+          in_progress: "active",
+          completed: "completed",
+          cancelled: "delayed",
+          pending: "pending",
+        };
+        return {
+          lat: p.location.lat!,
+          lng: p.location.lng!,
+          label: `${p.address || "Pickup #" + p.id} (${p.waste_type})`,
+          status: statusMap[p.status] || "pending" as const,
+        };
+      }),
+  ];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#E1F5EE", color: "#444441" }}>
@@ -525,21 +568,21 @@ const AdminDashboard = () => {
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
                     <p className="text-xs sm:text-sm text-muted-foreground">Active Routes</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{activeRoutes}</p>
+                    <p className="mt-1 sm:mt-2 text-base sm:text-xl font-bold text-primary">{activeRoutes}</p>
                     <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">From live route data</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
                     <p className="text-xs sm:text-sm text-muted-foreground">Completion Rate</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{collectionRate}%</p>
+                    <p className="mt-1 sm:mt-2 text-base sm:text-xl font-bold text-primary">{collectionRate}%</p>
                     <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">From pickup statuses</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/50">
                   <CardContent className="p-3 sm:p-5">
                     <p className="text-xs sm:text-sm text-muted-foreground">In-Progress Pickups</p>
-                    <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-primary">{inProgressPickups}</p>
+                    <p className="mt-1 sm:mt-2 text-base sm:text-xl font-bold text-primary">{inProgressPickups}</p>
                     <p className="mt-1 sm:mt-2 text-[11px] sm:text-xs text-muted-foreground">Currently assigned</p>
                   </CardContent>
                 </Card>
@@ -551,25 +594,7 @@ const AdminDashboard = () => {
                     <CardTitle className="text-base sm:text-lg" style={{ color: "#0F6E56" }}>Live Route Overview</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="relative h-[240px] sm:h-[360px] overflow-hidden rounded-xl border border-[#b8e0d4] bg-[radial-gradient(circle_at_center,_rgba(31,158,117,0.18),_rgba(255,255,255,0.9)_55%)]">
-                      <div className="absolute inset-0 opacity-80" style={{ backgroundImage: "linear-gradient(rgba(15,110,86,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(15,110,86,0.12) 1px, transparent 1px)", backgroundSize: "34px 34px" }} />
-
-                      <div className="absolute inset-4 grid grid-cols-2 gap-3 content-center">
-                        {allRoutes.slice(0, 4).map((route) => (
-                          <div key={route.id} className="rounded-lg border border-[#b8e0d4] bg-white/80 p-3 text-xs shadow-sm">
-                            <p className="font-medium truncate text-primary">{route.name}</p>
-                            <p className="text-muted-foreground">{route.status} · {route.stops_count} stops</p>
-                          </div>
-                        ))}
-                        {allRoutes.length === 0 && (
-                          <p className="col-span-2 text-center text-sm text-muted-foreground">No routes available.</p>
-                        )}
-                      </div>
-
-                      <div className="absolute bottom-4 left-4 rounded-lg border border-[#b8e0d4] bg-white/80 px-3 py-2 text-xs shadow-sm">
-                        <p className="font-medium text-primary">{allRoutes.length} routes total</p>
-                      </div>
-                    </div>
+                    <LeafletMap markers={routeMarkers} className="h-[240px] sm:h-[360px]" />
                   </CardContent>
                 </Card>
 
@@ -665,7 +690,7 @@ const AdminDashboard = () => {
                         onClick={() => setPickupZoneFilter(z)}
                         className={`text-xs sm:text-sm shrink-0 ${pickupZoneFilter !== z ? "bg-white hover:bg-primary/5" : ""}`}
                       >
-                        {z}
+                        {z.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                       </Button>
                     ))}
                   </div>
@@ -680,8 +705,8 @@ const AdminDashboard = () => {
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Zone</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Waste Type</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Scheduled</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Collector</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Priority</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -697,19 +722,23 @@ const AdminDashboard = () => {
                               <p className="text-xs text-muted-foreground">#{p.id} · {p.resident_detail ? [p.resident_detail.first_name, p.resident_detail.last_name].filter(Boolean).join(" ") || p.resident_detail.email : `Resident #${p.resident}`}</p>
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{p.zone || "-"}</td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">
+                            {p.zone ? <Badge variant="outline" className="text-xs bg-[#E1F5EE] text-[#0F6E56] border-[#b8e0d4]">{p.zone.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</Badge> : <span>-</span>}
+                          </td>
                           <td className="py-3 px-4 text-sm hidden md:table-cell">{p.waste_type}</td>
                           <td className="py-3 px-4 text-sm text-muted-foreground hidden lg:table-cell">
                             {formatDate(p.scheduled_datetime)}
                           </td>
+                          <td className="py-3 px-4 hidden lg:table-cell">
+                            {p.collector_detail ? (
+                              <span className="text-sm font-medium">{[p.collector_detail.first_name, p.collector_detail.last_name].filter(Boolean).join(" ") || p.collector_detail.email}</span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Unassigned</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             <Badge variant="outline" className={pickupStatusConfig[p.status]?.className}>
                               {pickupStatusConfig[p.status]?.label || p.status}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 hidden lg:table-cell">
-                            <Badge variant="outline" className={pickupPriorityConfig[p.priority]?.className}>
-                              {pickupPriorityConfig[p.priority]?.label || p.priority}
                             </Badge>
                           </td>
                           <td className="py-3 px-4">
@@ -750,9 +779,14 @@ const AdminDashboard = () => {
                         <Badge variant="outline" className={pickupPriorityConfig[p.priority]?.className}>
                           {pickupPriorityConfig[p.priority]?.label || p.priority}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{p.zone || "No zone"}</span>
+                        {p.zone && <Badge variant="outline" className="text-xs bg-[#E1F5EE] text-[#0F6E56] border-[#b8e0d4]">{p.zone.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</Badge>}
                         <span className="text-xs text-muted-foreground">{p.waste_type}</span>
                       </div>
+                      {p.collector_detail ? (
+                        <p className="text-xs text-[#0F6E56] font-medium mt-1.5">Assigned to: {[p.collector_detail.first_name, p.collector_detail.last_name].filter(Boolean).join(" ") || p.collector_detail.email}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1.5">Unassigned</p>
+                      )}
                       <div className="flex gap-2 mt-3">
                         <Button variant="outline" size="sm" className="flex-1 h-9 gap-1.5" onClick={() => setViewPickup(p)}>
                           <Eye className="h-3.5 w-3.5" style={{ color: "#0EA5E9" }} />
@@ -1306,13 +1340,17 @@ const AdminDashboard = () => {
             <AssignPickupContent
               pickup={assignPickup}
               collectors={collectors}
-              routes={routes}
-              onAssign={(collectorId, routeId) => {
+              onAssign={(collectorId) => {
+                const updateData: Record<string, unknown> = { collector: collectorId };
+                // Auto-change status to in_progress when assigning a collector
+                if (collectorId && assignPickup.status === "pending") {
+                  updateData.status = "in_progress";
+                }
                 updatePickupMutation.mutate(
-                  { id: assignPickup.id, data: { collector: collectorId, route: routeId } },
+                  { id: assignPickup.id, data: updateData },
                   {
                     onSuccess: () => {
-                      toast.success("Pickup assigned successfully.");
+                      toast.success(collectorId ? "Pickup assigned and route auto-created." : "Pickup unassigned.");
                       setAssignPickup(null);
                     },
                     onError: (err: Error) => toast.error(err.message || "Failed to assign pickup."),

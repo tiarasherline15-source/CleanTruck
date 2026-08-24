@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import type {
   PickupRequest,
   Route,
+  RouteStop,
   User,
   Notification,
   CollectionHistory,
@@ -48,6 +49,9 @@ export function useUpdatePickupRequest() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pickup-requests"] });
       qc.invalidateQueries({ queryKey: ["my-pickup-requests"] });
+      qc.invalidateQueries({ queryKey: ["collector-pickups"] });
+      qc.invalidateQueries({ queryKey: ["routes"] });
+      qc.invalidateQueries({ queryKey: ["collection-history"] });
     },
   });
 }
@@ -74,6 +78,17 @@ export function useUpdateRoute() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Route> }) =>
       api.patch<Route>(`/routes/${id}/`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["routes"] });
+    },
+  });
+}
+
+export function useUpdateRouteStop() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<RouteStop> }) =>
+      api.patch<RouteStop>(`/route-stops/${id}/`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["routes"] });
     },

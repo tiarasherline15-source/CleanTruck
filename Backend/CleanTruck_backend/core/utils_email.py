@@ -13,6 +13,7 @@ def _send_via_resend(to_email, subject, html_body, text_body=""):
         import resend
 
         resend.api_key = settings.RESEND_API_KEY
+        logger.info(f"Sending email to {to_email} via Resend from {settings.DEFAULT_FROM_EMAIL}")
         result = resend.Emails.send({
             "from": settings.DEFAULT_FROM_EMAIL,
             "to": [to_email],
@@ -20,11 +21,11 @@ def _send_via_resend(to_email, subject, html_body, text_body=""):
             "html": html_body,
             "text": text_body or html_body,
         })
-        logger.info(f"Resend API response: {result}")
+        logger.info(f"Resend API response for {to_email}: {result}")
 
         # Check if Resend returned an error in the response body
         if isinstance(result, dict) and result.get("error"):
-            logger.error(f"Resend returned error: {result['error']}")
+            logger.error(f"Resend returned error for {to_email}: {result['error']}")
             return False
 
         return True
@@ -123,6 +124,46 @@ def send_otp_email(user, otp_code, purpose="verification"):
 # ──────────────────────────────────────────────────────────────────────
 # Transactional Emails
 # ──────────────────────────────────────────────────────────────────────
+
+def send_collector_credentials_email(user, temporary_password):
+    """Send a collector their one-time login credentials."""
+    subject = "Your CleanTruck Collector Account"
+    first_name = getattr(user, "first_name", "") or "there"
+
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f6fafa; padding: 20px;">
+            <div style="background-color: white; border-radius: 8px; padding: 30px; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #0F6E56;">Welcome to CleanTruck, {first_name}!</h2>
+                <p style="color: #444441; font-size: 16px;">
+                    Your collector account has been created. Use the credentials below to sign in.
+                </p>
+
+                <div style="background-color: #f0faf8; border-left: 4px solid #1D9E75; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <p style="color: #444441;"><strong>Email:</strong> {user.email}</p>
+                    <p style="color: #444441;"><strong>Temporary password:</strong> {temporary_password}</p>
+                </div>
+
+                <p style="color: #6B9E8A; font-size: 14px;">
+                    You will be required to change this password the first time you sign in.
+                </p>
+
+                <p style="color: #444441; margin-top: 30px;">
+                    Best regards,<br/>
+                    <strong style="color: #0F6E56;">CleanTruck Team</strong>
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    text_body = (
+        f"Welcome to CleanTruck, {first_name}!\n\n"
+        f"Email: {user.email}\n"
+        f"Temporary password: {temporary_password}\n\n"
+        "You must change this password the first time you sign in."
+    )
+
+    return send_email(user.email, subject, html_body, text_body)
 
 def send_pickup_scheduled_email(user, pickup_request):
     """Send email when pickup is scheduled"""

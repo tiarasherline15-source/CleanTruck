@@ -14,11 +14,12 @@ import DashboardDialog from "@/components/ui/DashboardDialog";
 import {
   Calendar, Truck, Clock, Plus,
   CheckCircle2, AlertCircle, XCircle, LogOut, User,
-  Home, FileText, Settings, Bell, ChevronRight, Send, MapPin, Tag, MapPinned, StickyNote, Trash2,
+  Home, FileText, Settings, Bell, ChevronRight, Send, MapPin, Tag, StickyNote, Trash2,
   Loader2
 } from "lucide-react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import ImageUpload from "@/components/ui/ImageUpload";
+import AddressPicker from "@/components/AddressPicker";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
 import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useMyPickupRequests, useCreatePickupRequest, useNotifications } from "@/hooks/useApi";
@@ -57,6 +58,7 @@ const Dashboard = () => {
     address: "",
     notes: "",
   });
+  const [scheduleLocation, setScheduleLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleScheduleChange = (field: string, value: string) => {
     setScheduleForm(prev => ({ ...prev, [field]: value }));
@@ -440,9 +442,19 @@ const Dashboard = () => {
 
           <div className="space-y-2">
             <Label htmlFor="pickup-address" className="text-[#444441]">Pickup Address</Label>
-            <div className="relative">
-              <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: "#6B9E8A" }} />
-              <Input id="pickup-address" placeholder="Enter your address..." value={scheduleForm.address} onChange={(e) => handleScheduleChange("address", e.target.value)} className="pl-10 h-11 border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]" />
+            <AddressPicker
+              value={scheduleForm.address}
+              location={scheduleLocation}
+              onChange={(addr) => handleScheduleChange("address", addr)}
+              onLocationChange={setScheduleLocation}
+              placeholder="Enter your pickup address..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[#444441]">Your Zone</Label>
+            <div className="flex h-11 items-center rounded-md border border-[#b8e0d4] bg-[#F6FAFA] px-3 text-sm" style={{ color: user?.zone ? "#0F6E56" : "#6B9E8A" }}>
+              {user?.zone || "Zone not set in your profile"}
             </div>
           </div>
 
@@ -453,7 +465,7 @@ const Dashboard = () => {
         </div>
 
         <div className="flex flex-row gap-2 sm:gap-3 pt-2">
-          <Button variant="outline" className="flex-1 h-11" onClick={() => handleDialogClose(setScheduleOpen)}>Cancel</Button>
+          <Button variant="outline" className="flex-1 h-11" onClick={() => { setScheduleLocation(null); handleDialogClose(setScheduleOpen); }}>Cancel</Button>
           <Button
             className="flex-1 h-11 bg-[#1D9E75] text-white hover:bg-[#0F6E56] gap-2"
             disabled={createPickup.isPending}
@@ -468,6 +480,8 @@ const Dashboard = () => {
                   waste_type: scheduleForm.waste_type as PickupRequest["waste_type"],
                   scheduled_datetime,
                   address: scheduleForm.address,
+                  zone: user?.zone || "",
+                  location: scheduleLocation || undefined,
                   notes: scheduleForm.notes,
                   status: "pending",
                   priority: "normal",
@@ -476,6 +490,7 @@ const Dashboard = () => {
                   onSuccess: () => {
                     toast.success("Pickup request submitted!");
                     setScheduleForm({ waste_type: "", date: "", time: "", address: "", notes: "" });
+                    setScheduleLocation(null);
                     handleDialogClose(setScheduleOpen);
                   },
                   onError: (err: Error) => {

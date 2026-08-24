@@ -33,6 +33,7 @@ from .serializers import (
     VerifyOTPSerializer,
     ResetPasswordSerializer,
 )
+from .utils_email import send_collector_credentials_email
 
 User = get_user_model()
 
@@ -199,7 +200,42 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         return PickupRequest.objects.filter(resident=user)
 
     def perform_create(self, serializer):
-        serializer.save(resident=self.request.user)
+        serializer.save(resident=self.request.user, zone=self.request.user.zone)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        # Auto-assign a route when a collector is set but no route is specified
+        if instance.collector and not instance.route:
+            route = self._get_or_create_route(instance.collector)
+            instance.route = route
+            instance.save(update_fields=["route"])
+
+    def _get_or_create_route(self, collector):
+        """Find an active/upcoming route for the collector, or create one."""
+        # Try to find an existing active or upcoming route
+        route = (
+            Route.objects
+            .filter(collector=collector, status__in=[Route.Status.ACTIVE, Route.Status.UPCOMING])
+            .order_by("-created_at")
+            .first()
+        )
+        if route:
+            # Update stops_count to reflect actual pickups
+            route.stops_count = PickupRequest.objects.filter(route=route).count()
+            route.save(update_fields=["stops_count"])
+            return route
+
+        # Create a new route
+        from django.utils import timezone
+        collector_name = collector.get_full_name() or collector.username
+        today = timezone.now().strftime("%b %d, %Y")
+        route = Route.objects.create(
+            name=f"{collector_name} - {today}",
+            collector=collector,
+            status=Route.Status.UPCOMING,
+            stops_count=0,
+        )
+        return route
 
     @action(detail=False, methods=["get"], url_path="my")
     def my(self, request):
@@ -354,6 +390,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = CreateCollectorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         collector = serializer.save()
+        send_collector_credentials_email(collector, collector._temporary_password)
         response_data = UserSerializer(collector).data
         response_data["temporary_password"] = collector._temporary_password
         return Response(response_data, status=status.HTTP_201_CREATED)

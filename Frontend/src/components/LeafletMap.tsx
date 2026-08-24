@@ -91,10 +91,11 @@ const LeafletMap = ({
 
   return (
     <div
-      ref={mapRef}
-      className={`rounded-xl overflow-hidden border border-[#b8e0d4] ${className}`}
-      style={{ minHeight: "250px" }}
-    />
+      className={`rounded-xl overflow-hidden border border-[#b8e0d4] relative ${className}`}
+      style={{ minHeight: "250px", zIndex: 0 }}
+    >
+      <div ref={mapRef} style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }} />
+    </div>
   );
 };
 

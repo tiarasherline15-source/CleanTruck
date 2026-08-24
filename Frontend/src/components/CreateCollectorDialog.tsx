@@ -5,6 +5,7 @@ import DashboardDialog from "@/components/ui/DashboardDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateCollector } from "@/hooks/useApi";
 import type { CreatedCollector } from "@/lib/types";
 
@@ -12,6 +13,18 @@ interface CreateCollectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const zones = [
+  { value: "westlands", label: "Westlands" },
+  { value: "kilimani", label: "Kilimani" },
+  { value: "kileleshwa", label: "Kileleshwa" },
+  { value: "lavington", label: "Lavington" },
+  { value: "karen", label: "Karen" },
+  { value: "langata", label: "Lang'ata" },
+  { value: "upper_hill", label: "Upper Hill" },
+  { value: "cbd", label: "CBD" },
+  { value: "riruta", label: "Riruta" },
+];
 
 const CreateCollectorDialog = ({ open, onOpenChange }: CreateCollectorDialogProps) => {
   const createCollector = useCreateCollector();
@@ -54,11 +67,11 @@ const CreateCollectorDialog = ({ open, onOpenChange }: CreateCollectorDialogProp
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="collector-first_name">First name <span className="text-destructive">*</span></Label>
-              <Input id="collector-first_name" placeholder="e.g. John" value={form.first_name} onChange={(e) => update("first_name", e.target.value)} required />
+              <Input id="collector-first_name" placeholder="e.g. Riccky" value={form.first_name} onChange={(e) => update("first_name", e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="collector-last_name">Last name</Label>
-              <Input id="collector-last_name" placeholder="e.g. Doe" value={form.last_name} onChange={(e) => update("last_name", e.target.value)} />
+              <Input id="collector-last_name" placeholder="e.g. Tom" value={form.last_name} onChange={(e) => update("last_name", e.target.value)} />
             </div>
           </div>
           <div className="space-y-2">
@@ -71,8 +84,17 @@ const CreateCollectorDialog = ({ open, onOpenChange }: CreateCollectorDialogProp
               <Input id="collector-phone" placeholder="e.g. +254 7XX XXX XXX" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="collector-zone">Zone</Label>
-              <Input id="collector-zone" placeholder="e.g. Sector 3" value={form.zone} onChange={(e) => update("zone", e.target.value)} />
+              <Label htmlFor="collector-zone">Sector / Zone</Label>
+              <Select value={form.zone} onValueChange={(value) => update("zone", value)}>
+                <SelectTrigger id="collector-zone" className="border-[#b8e0d4] bg-[#F6FAFA]">
+                  <SelectValue placeholder="Select a zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zones.map((zone) => (
+                    <SelectItem key={zone.value} value={zone.value}>{zone.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" onClick={submit} disabled={createCollector.isPending}>
