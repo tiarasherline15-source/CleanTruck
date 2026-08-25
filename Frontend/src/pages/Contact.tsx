@@ -132,7 +132,8 @@ const Contact = () => {
                         Phone
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        +254 700 123 456
+                        +254 740 561 299
+                      
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Mon - Fri, 8 AM - 6 PM
@@ -234,7 +235,7 @@ const Contact = () => {
                             <Input
                               id="name"
                               name="name"
-                              placeholder="John Doe"
+                              placeholder="Jane Smith"
                               value={formData.name}
                               onChange={handleChange}
                               className="border-[#b8e0d4] bg-[#F6FAFA] focus:border-[#1D9E75]"

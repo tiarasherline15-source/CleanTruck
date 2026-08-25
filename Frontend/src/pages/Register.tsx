@@ -75,7 +75,7 @@ const Register = () => {
         role: "resident",
       });
       // After auto-login, navigate to resident dashboard
-      const stored = localStorage.getItem("user");
+      const stored = sessionStorage.getItem("user");
       const user = stored ? JSON.parse(stored) : null;
       const redirectPath = roleRedirect[user?.role] || "/dashboard";
       toast.success("Account created successfully!");

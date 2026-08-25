@@ -2,22 +2,22 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"
 
 //  Token helpers
 export function getAccessToken(): string | null {
-  return localStorage.getItem("access_token");
+  return sessionStorage.getItem("access_token");
 }
 
 export function getRefreshToken(): string | null {
-  return localStorage.getItem("refresh_token");
+  return sessionStorage.getItem("refresh_token");
 }
 
 export function setTokens(access: string, refresh: string) {
-  localStorage.setItem("access_token", access);
-  localStorage.setItem("refresh_token", refresh);
+  sessionStorage.setItem("access_token", access);
+  sessionStorage.setItem("refresh_token", refresh);
 }
 
 export function clearTokens() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("user");
+  sessionStorage.removeItem("access_token");
+  sessionStorage.removeItem("refresh_token");
+  sessionStorage.removeItem("user");
 }
 
 //  Refresh logic 
@@ -40,9 +40,9 @@ async function refreshAccessToken(): Promise<string | null> {
     }
 
     const data = await res.json();
-    localStorage.setItem("access_token", data.access);
+    sessionStorage.setItem("access_token", data.access);
     if (data.refresh) {
-      localStorage.setItem("refresh_token", data.refresh);
+      sessionStorage.setItem("refresh_token", data.refresh);
     }
     return data.access;
   } catch {

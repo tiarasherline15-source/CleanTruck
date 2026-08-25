@@ -27,8 +27,8 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       await login({ email, password });
-      // After login, get user from context via localStorage
-      const stored = localStorage.getItem("user");
+      // After login, get user from sessionStorage
+      const stored = sessionStorage.getItem("user");
       const user = stored ? JSON.parse(stored) : null;
       const redirectPath = roleRedirect[user?.role] || "/dashboard";
       toast.success("Logged in successfully!");

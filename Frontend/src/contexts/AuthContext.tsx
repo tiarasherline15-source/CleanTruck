@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await api.get<User>("/users/me/");
       setUser(me);
-      localStorage.setItem("user", JSON.stringify(me));
+      sessionStorage.setItem("user", JSON.stringify(me));
     } catch {
       clearTokens();
       setUser(null);
@@ -45,13 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Restore user from localStorage first for fast UI, then refresh from API
-    const stored = localStorage.getItem("user");
+    // Restore user from sessionStorage first for fast UI, then refresh from API
+    const stored = sessionStorage.getItem("user");
     if (stored) {
       try {
         setUser(JSON.parse(stored));
       } catch {
-        localStorage.removeItem("user");
+        sessionStorage.removeItem("user");
       }
     }
     fetchUser();
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokens(data.access, data.refresh);
     const me = await api.get<User>("/users/me/");
     setUser(me);
-    localStorage.setItem("user", JSON.stringify(me));
+    sessionStorage.setItem("user", JSON.stringify(me));
   };
 
   const register = async (payload: RegisterPayload) => {
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      localStorage.setItem("user", JSON.stringify(updated));
+      sessionStorage.setItem("user", JSON.stringify(updated));
       return updated;
     });
   };

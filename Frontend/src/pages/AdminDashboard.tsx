@@ -256,16 +256,18 @@ const AdminDashboard = () => {
   const routeMarkers = [
     // Route waypoints
     ...allRoutes.flatMap((route) => {
-      const waypointMarkers = route.waypoints
-        .filter((waypoint) => Number.isFinite(waypoint.lat) && Number.isFinite(waypoint.lng))
+      const waypoints = route.waypoints || [];
+      const stops = route.stops || [];
+      const waypointMarkers = waypoints
+        .filter((waypoint) => waypoint && Number.isFinite(waypoint.lat) && Number.isFinite(waypoint.lng))
         .map((waypoint, index) => ({
           lat: waypoint.lat,
           lng: waypoint.lng,
           label: `${route.name} waypoint ${index + 1}`,
           status: route.status === "active" ? "active" as const : route.status === "completed" ? "completed" as const : "pending" as const,
         }));
-      const stopMarkers = route.stops
-        .filter((stop) => Number.isFinite(stop.location?.lat) && Number.isFinite(stop.location?.lng))
+      const stopMarkers = stops
+        .filter((stop) => stop?.location && Number.isFinite(stop.location.lat) && Number.isFinite(stop.location.lng))
         .map((stop) => ({
           lat: stop.location.lat!,
           lng: stop.location.lng!,

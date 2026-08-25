@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { WelcomeCard } from "@/components/ui/WelcomeCard";
 import MobileSidebar from "@/components/ui/MobileSidebar";
 import NotificationDrawer from "@/components/ui/NotificationDrawer";
@@ -19,7 +19,7 @@ import {
   Loader2, AlertCircle, ChevronDown, ChevronUp
 } from "lucide-react";
 import { useCollectorPickups, useRoutes, useCollectionHistory, useUpdatePickupRequest, useUpdateRoute, useUpdateRouteStop, useNotifications } from "@/hooks/useApi";
-import LeafletMap from "@/components/LeafletMap";
+import LeafletMap, { type MapMarker } from "@/components/LeafletMap";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { DashboardFullSkeleton } from "@/components/ui/DashboardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +40,17 @@ const wasteTypeIcons: Record<string, string> = {
   "E-Waste": "🔌",
 };
 
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): string {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+}
+
 const CollectorDashboard = () => {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -56,6 +67,9 @@ const CollectorDashboard = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [expandedRoute, setExpandedRoute] = useState<number | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [navMode, setNavMode] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
 
   const pickups = normalizeList<PickupRequest>(pickupsData);
   const routes = normalizeList<RouteType>(routesData);
@@ -114,7 +128,11 @@ const CollectorDashboard = () => {
     updateRouteMutation.mutate(
       { id: upcoming.id, data: { status: "active" } },
       {
-        onSuccess: () => toast.success(`Route "${upcoming.name}" started!`),
+        onSuccess: () => {
+          toast.success(`Route "${upcoming.name}" started!`);
+          setNavMode(true);
+          setActiveTab("routes");
+        },
         onError: (err: Error) => toast.error(err.message || "Failed to start route."),
       },
     );
@@ -122,6 +140,7 @@ const CollectorDashboard = () => {
 
   const handlePauseRoute = () => {
     if (!activeRoute) return;
+    setNavMode(false);
     updateRouteMutation.mutate(
       { id: activeRoute.id, data: { status: "upcoming" } },
       {
@@ -180,6 +199,67 @@ const CollectorDashboard = () => {
       setActiveTab(tab);
     }
   };
+
+  // Geolocation tracking
+  const startTracking = useCallback(() => {
+    if (!navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      (pos) => setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+    watchIdRef.current = id;
+  }, []);
+
+  const stopTracking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isRouteActive) {
+      startTracking();
+    } else {
+      stopTracking();
+      setCurrentLocation(null);
+      setNavMode(false);
+    }
+    return stopTracking;
+  }, [isRouteActive, startTracking, stopTracking]);
+
+  // Build dynamic map markers from pickups (sorted by scheduled time)
+  const pickupMarkers: MapMarker[] = pickups
+    .filter((p) => p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng))
+    .sort((a, b) => new Date(a.scheduled_datetime).getTime() - new Date(b.scheduled_datetime).getTime())
+    .map((p, idx) => {
+      const statusMap: Record<string, "active" | "completed" | "pending" | "delayed"> = {
+        in_progress: "active",
+        completed: "completed",
+        cancelled: "delayed",
+        pending: "pending",
+      };
+      return {
+        lat: p.location.lat!,
+        lng: p.location.lng!,
+        label: `${p.address || "Pickup #" + p.id} (${p.waste_type})`,
+        status: statusMap[p.status] || "pending" as const,
+        order: idx + 1,
+      };
+    });
+
+  // Route line connecting pickup locations (pending/in_progress first)
+  const activePickupLine = isRouteActive && pickupMarkers.length >= 2
+    ? pickupMarkers
+        .filter((m) => m.status !== "completed")
+        .concat(pickupMarkers.filter((m) => m.status === "completed").reverse())
+        .map((m) => ({ lat: m.lat, lng: m.lng }))
+    : pickupMarkers.length >= 2
+      ? pickupMarkers.map((m) => ({ lat: m.lat, lng: m.lng }))
+      : undefined;
+
+  const nextPickup = pickupMarkers.find((m) => m.status === "pending" || m.status === "active");
 
   const navItems = [
     { id: "overview", label: "Overview", icon: Home },
@@ -242,10 +322,21 @@ const CollectorDashboard = () => {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {isRouteActive ? (
-              <Button size="sm" variant="destructive" className="gap-2" onClick={handlePauseRoute} disabled={updateRouteMutation.isPending}>
-                {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
-                Pause Route
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant={navMode ? "default" : "outline"}
+                  className={`gap-2 ${navMode ? "bg-[#0EA5E9] text-white hover:bg-[#0284C7]" : "border-[#0EA5E9] text-[#0EA5E9] hover:bg-[#0EA5E9] hover:text-white"}`}
+                  onClick={() => setNavMode(!navMode)}
+                >
+                  <Navigation className="h-4 w-4" />
+                  {navMode ? "Navigating" : "Navigate"}
+                </Button>
+                <Button size="sm" variant="destructive" className="gap-2" onClick={handlePauseRoute} disabled={updateRouteMutation.isPending}>
+                  {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
+                  Pause
+                </Button>
+              </>
             ) : (
               <Button size="sm" className="gap-2 bg-[#1D9E75] text-white hover:bg-[#0F6E56]" onClick={handleStartRoute} disabled={updateRouteMutation.isPending}>
                 {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
@@ -330,6 +421,47 @@ const CollectorDashboard = () => {
                       </div>
                     </div>
                     <Progress value={progressPercentage} className="h-2" />
+
+                    {/* Live Map */}
+                    <div className="rounded-xl overflow-hidden">
+                      <LeafletMap
+                        markers={pickupMarkers}
+                        routeLine={activePickupLine}
+                        currentLocation={currentLocation}
+                        showNavigation={navMode}
+                        className="h-[220px] sm:h-[300px]"
+                      />
+                    </div>
+
+                    {/* Next pickup navigation card */}
+                    {nextPickup && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#b8e0d4]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0EA5E9] text-white text-xs font-bold">
+                            {nextPickup.order}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: "#0F6E56" }}>Next: {nextPickup.label.split("(")[0].trim()}</p>
+                            {currentLocation && (
+                              <p className="text-xs" style={{ color: "#444441" }}>
+                                ~{getDistanceKm(currentLocation.lat, currentLocation.lng, nextPickup.lat, nextPickup.lng)} km away
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gap-1 bg-[#0EA5E9] text-white hover:bg-[#0284C7]"
+                          onClick={() => {
+                            const addr = encodeURIComponent(nextPickup.label.split("(")[0].trim());
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, "_blank");
+                          }}>
+                          <Navigation className="h-3.5 w-3.5" />
+                          Go
+                        </Button>
+                      </div>
+                    )}
+
                     {activeRoute.stops && activeRoute.stops.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground">Route Stops ({activeRoute.stops.filter(s => s.status === "completed").length}/{activeRoute.stops.length})</p>
@@ -453,7 +585,7 @@ const CollectorDashboard = () => {
           {/* ROUTE MANAGEMENT TAB */}
           {!isLoading && activeTab === "routes" && (
             <div className="space-y-4">
-              {/* Active Route Map */}
+              {/* Active Route with Live Map */}
               {isRouteActive && activeRoute && (
                 <Card className="border-[#b8e0d4] bg-[#F6FAFA]">
                   <CardHeader className="pb-3">
@@ -463,115 +595,146 @@ const CollectorDashboard = () => {
                           <Navigation className="h-5 w-5" />
                           {activeRoute.name}
                           <Badge className="bg-[#9FE1CB] text-[#0F6E56]">Active</Badge>
+                          {navMode && <Badge className="bg-[#0EA5E9] text-white">Navigation</Badge>}
                         </CardTitle>
                         <CardDescription className="mt-1">
                           {activeRoute.distance_km ? `${activeRoute.distance_km} km` : ""}{activeRoute.distance_km && activeRoute.estimated_duration ? " · " : ""}{activeRoute.estimated_duration || ""}
                         </CardDescription>
                       </div>
-                      <Button
-                        size="sm"
-                        className="gap-2 bg-[#DC2626] text-white hover:bg-[#B91C1C]"
-                        onClick={handleCompleteRoute}
-                        disabled={updateRouteMutation.isPending}
-                      >
-                        {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        <span className="hidden sm:inline">Complete Route</span>
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={navMode ? "default" : "outline"}
+                          className={`gap-2 ${navMode ? "bg-[#0EA5E9] text-white hover:bg-[#0284C7]" : ""}`}
+                          onClick={() => setNavMode(!navMode)}
+                        >
+                          <Navigation className="h-4 w-4" />
+                          <span className="hidden sm:inline">{navMode ? "Navigating" : "Navigate"}</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-2 bg-[#DC2626] text-white hover:bg-[#B91C1C]"
+                          onClick={handleCompleteRoute}
+                          disabled={updateRouteMutation.isPending}
+                        >
+                          {updateRouteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                          <span className="hidden sm:inline">Complete Route</span>
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Map */}
+                    {/* Dynamic Map with route line and current location */}
                     <LeafletMap
-                      markers={[
-                        // Route stop locations
-                        ...(activeRoute.stops
-                          ?.filter((s) => s.location?.lat && s.location?.lng)
-                          .map((s) => ({
-                            lat: s.location.lat!,
-                            lng: s.location.lng!,
-                            label: `Stop #${s.stop_number}: ${s.address}`,
-                            status: s.status === "completed" ? "completed" as const : s.status === "in_progress" ? "active" as const : s.status === "cancelled" ? "delayed" as const : "pending" as const,
-                          })) || []),
-                        // Pickup request locations
-                        ...pickups
-                          .filter((p) => p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng))
-                          .map((p) => {
-                            const statusMap: Record<string, "active" | "completed" | "pending" | "delayed"> = {
-                              in_progress: "active",
-                              completed: "completed",
-                              cancelled: "delayed",
-                              pending: "pending",
-                            };
-                            return {
-                              lat: p.location.lat!,
-                              lng: p.location.lng!,
-                              label: `${p.address || "Pickup #" + p.id} (${p.waste_type})`,
-                              status: statusMap[p.status] || "pending" as const,
-                            };
-                          }),
-                      ]}
-                      center={activeRoute.waypoints && activeRoute.waypoints.length > 0 ? [activeRoute.waypoints[0].lat, activeRoute.waypoints[0].lng] : undefined}
-                      className="h-[280px] sm:h-[360px]"
+                      markers={pickupMarkers}
+                      routeLine={activePickupLine}
+                      currentLocation={currentLocation}
+                      showNavigation={navMode}
+                      className="h-[280px] sm:h-[400px]"
                     />
 
-                    {/* Stops List */}
-                    {activeRoute.stops && activeRoute.stops.length > 0 && (
+                    {/* Next pickup navigation card */}
+                    {nextPickup && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#b8e0d4]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0EA5E9] text-white text-xs font-bold">
+                            {nextPickup.order}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: "#0F6E56" }}>Next: {nextPickup.label.split("(")[0].trim()}</p>
+                            {currentLocation && (
+                              <p className="text-xs" style={{ color: "#444441" }}>
+                                ~{getDistanceKm(currentLocation.lat, currentLocation.lng, nextPickup.lat, nextPickup.lng)} km away
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gap-1 bg-[#0EA5E9] text-white hover:bg-[#0284C7]"
+                          onClick={() => {
+                            const addr = encodeURIComponent(nextPickup.label.split("(")[0].trim());
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, "_blank");
+                          }}>
+                          <Navigation className="h-3.5 w-3.5" />
+                          Go
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Pickup stops list (dynamic from pickups) */}
+                    {pickupMarkers.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold" style={{ color: "#0F6E56" }}>
-                          Stops ({activeRoute.stops.filter(s => s.status === "completed").length}/{activeRoute.stops.length} completed)
+                          Pickups ({pickupMarkers.filter(m => m.status === "completed").length}/{pickupMarkers.length} completed)
                         </p>
                         <div className="space-y-2">
-                          {[...activeRoute.stops].sort((a, b) => a.stop_number - b.stop_number).map((stop) => (
-                            <div
-                              key={stop.id}
-                              className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                                stop.status === "completed"
-                                  ? "bg-[#9FE1CB]/30 border-[#0F6E56]/20"
-                                  : stop.status === "in_progress"
-                                    ? "bg-[#FEF3C7]/50 border-[#D97706]/30"
-                                    : "bg-white border-[#b8e0d4]"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                                  stop.status === "completed"
-                                    ? "bg-[#0F6E56] text-white"
-                                    : stop.status === "in_progress"
-                                      ? "bg-[#D97706] text-white"
-                                      : "bg-[#b8e0d4] text-[#444441]"
-                                }`}>
-                                  {stop.status === "completed" ? <Check className="h-4 w-4" /> : stop.stop_number}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate" style={{ color: "#0F6E56" }}>{stop.address}</p>
-                                  <div className="flex items-center gap-2 text-xs" style={{ color: "#444441" }}>
-                                    {stop.arrival_time && <span>Arrived: {formatTime(stop.arrival_time)}</span>}
-                                    {stop.departure_time && <span>· Left: {formatTime(stop.departure_time)}</span>}
-                                    {stop.pickup_requests && stop.pickup_requests.length > 0 && (
-                                      <span>· {stop.pickup_requests.length} pickup{stop.pickup_requests.length > 1 ? "s" : ""}</span>
-                                    )}
+                          {pickupMarkers.map((marker) => {
+                            const pickup = pickups.find(
+                              p => p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng) &&
+                                Math.abs(p.location.lat! - marker.lat) < 0.0001 && Math.abs(p.location.lng! - marker.lng) < 0.0001
+                            );
+                            return (
+                              <div
+                                key={`${marker.lat}-${marker.lng}`}
+                                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                                  marker.status === "completed"
+                                    ? "bg-[#9FE1CB]/30 border-[#0F6E56]/20"
+                                    : marker.status === "active"
+                                      ? "bg-[#FEF3C7]/50 border-[#D97706]/30"
+                                      : "bg-white border-[#b8e0d4]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                                    marker.status === "completed"
+                                      ? "bg-[#0F6E56] text-white"
+                                      : marker.status === "active"
+                                        ? "bg-[#D97706] text-white"
+                                        : "bg-[#b8e0d4] text-[#444441]"
+                                  }`}>
+                                    {marker.status === "completed" ? <Check className="h-4 w-4" /> : marker.order}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate" style={{ color: "#0F6E56" }}>{marker.label.split("(")[0].trim()}</p>
+                                    <p className="text-xs truncate" style={{ color: "#444441" }}>{marker.label.match(/\((.+)\)/)?.[1] || ""}</p>
                                   </div>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  {marker.status === "completed" && (
+                                    <Badge className="bg-[#9FE1CB] text-[#0F6E56] text-xs">Done</Badge>
+                                  )}
+                                  {marker.status !== "completed" && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 text-xs h-7 border-[#b8e0d4]"
+                                        onClick={() => {
+                                          const addr = encodeURIComponent(marker.label.split("(")[0].trim());
+                                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${addr}`, "_blank");
+                                        }}
+                                      >
+                                        <Navigation className="h-3 w-3" style={{ color: "#0EA5E9" }} />
+                                        Go
+                                      </Button>
+                                      {pickup && (
+                                        <Button
+                                          size="sm"
+                                          className="gap-1 text-xs h-7 bg-[#1D9E75] text-white hover:bg-[#0F6E56]"
+                                          onClick={() => handleCompletePickup(pickup.id)}
+                                          disabled={updatePickupMutation.isPending}
+                                        >
+                                          <Check className="h-3 w-3" />
+                                          Done
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {stop.status === "completed" && (
-                                  <Badge className="bg-[#9FE1CB] text-[#0F6E56] text-xs">Done</Badge>
-                                )}
-                                {stop.status !== "completed" && stop.status !== "cancelled" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-1 text-xs h-7 border-[#b8e0d4] hover:bg-[#1D9E75] hover:text-white"
-                                    onClick={() => handleCompleteStop(stop)}
-                                    disabled={updateStopMutation.isPending}
-                                  >
-                                    <Check className="h-3 w-3" />
-                                    Complete
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
