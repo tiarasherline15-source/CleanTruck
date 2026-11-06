@@ -124,7 +124,7 @@ const AdminDashboard = () => {
 
   // Computed analytics from real data 
   const totalPickups = allPickups.length;
-  const totalWeight = allHistory.reduce((sum, h) => sum + (h.weight_kg || 0), 0);
+  const totalWeight = allHistory.reduce((sum, h) => sum + Number(h.weight_kg || 0), 0);
   const activeUsers = allUsers.filter(u => u.status === "active").length;
   const activeCollectors = allUsers.filter(u => u.role === "collector" && u.status === "active").length;
   const completedPickups = allPickups.filter(p => p.status === "completed").length;
@@ -141,7 +141,7 @@ const AdminDashboard = () => {
     if (!zoneMap.has(zone)) zoneMap.set(zone, { count: 0, weight: 0, collectorIds: new Set() });
     const entry = zoneMap.get(zone)!;
     entry.count++;
-    entry.weight += p.actual_weight_kg || p.estimated_weight_kg || 0;
+    entry.weight += Number(p.actual_weight_kg || p.estimated_weight_kg || 0);
     if (p.collector) entry.collectorIds.add(p.collector);
   });
   const sectorReports = Array.from(zoneMap.entries()).map(([sector, data]) => ({
@@ -159,7 +159,7 @@ const AdminDashboard = () => {
     if (!monthMap.has(month)) monthMap.set(month, { count: 0, weight: 0 });
     const entry = monthMap.get(month)!;
     entry.count++;
-    entry.weight += h.weight_kg || 0;
+    entry.weight += Number(h.weight_kg || 0);
   });
   const monthlyReports = Array.from(monthMap.entries()).map(([period, data]) => ({
     period,

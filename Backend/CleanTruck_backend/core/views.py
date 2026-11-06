@@ -200,19 +200,90 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         return PickupRequest.objects.filter(resident=user)
 
     def perform_create(self, serializer):
-        serializer.save(resident=self.request.user, zone=self.request.user.zone)
+        location = serializer.validated_data.get("location") or {}
+        address = serializer.validated_data.get("address", "")
+        if (not location or "lat" not in location or "lng" not in location) and address:
+            from .geocoding import geocode_address
+            geocoded = geocode_address(address)
+            if geocoded:
+                location = geocoded
+        serializer.save(
+            resident=self.request.user,
+            zone=serializer.validated_data.get("zone") or self.request.user.zone,
+            location=location,
+        )
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        # Auto-assign a route when a collector is set but no route is specified
+        # Auto-assign a route when a collector is set
         if instance.collector and not instance.route:
             route = self._get_or_create_route(instance.collector)
             instance.route = route
             instance.save(update_fields=["route"])
+        if instance.route:
+            self._sync_route_metrics_and_stops(instance.route)
+
+    def _sync_route_metrics_and_stops(self, route):
+        """Sync RouteStops, stops_count, distance_km, estimated_duration, and waypoints from assigned pickups."""
+        from datetime import timedelta
+        from decimal import Decimal
+        import math
+
+        pickups = list(
+            PickupRequest.objects.filter(route=route).order_by("scheduled_datetime", "id")
+        )
+        route.stops_count = len(pickups)
+
+        waypoints = []
+        for idx, pickup in enumerate(pickups, start=1):
+            stop_status = (
+                RouteStops.Status.COMPLETED
+                if pickup.status == PickupRequest.Status.COMPLETED
+                else RouteStops.Status.IN_PROGRESS
+                if pickup.status == PickupRequest.Status.IN_PROGRESS
+                else RouteStops.Status.CANCELLED
+                if pickup.status == PickupRequest.Status.CANCELLED
+                else RouteStops.Status.PENDING
+            )
+            stop, _ = RouteStops.objects.update_or_create(
+                route=route,
+                stop_number=idx,
+                defaults={
+                    "address": pickup.address,
+                    "status": stop_status,
+                    "location": pickup.location or {},
+                },
+            )
+            stop.pickup_requests.set([pickup])
+            if pickup.location and "lat" in pickup.location and "lng" in pickup.location:
+                waypoints.append({"lat": pickup.location["lat"], "lng": pickup.location["lng"]})
+
+        # Remove any stale stops beyond current pickup count
+        RouteStops.objects.filter(route=route, stop_number__gt=len(pickups)).delete()
+
+        # Compute Haversine distance across waypoints
+        total_km = 0.0
+        for i in range(1, len(waypoints)):
+            lat1, lng1 = waypoints[i - 1]["lat"], waypoints[i - 1]["lng"]
+            lat2, lng2 = waypoints[i]["lat"], waypoints[i]["lng"]
+            r = 6371.0
+            dlat = math.radians(lat2 - lat1)
+            dlng = math.radians(lng2 - lng1)
+            a = (
+                math.sin(dlat / 2) ** 2
+                + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+            )
+            total_km += r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        route.waypoints = waypoints
+        route.distance_km = Decimal(f"{total_km:.2f}")
+        # Estimate ~15 mins per stop + ~3 mins per km
+        minutes = max(len(pickups) * 15 + int(round(total_km * 3)), 0)
+        route.estimated_duration = timedelta(minutes=minutes) if pickups else None
+        route.save(update_fields=["stops_count", "waypoints", "distance_km", "estimated_duration", "updated_at"])
 
     def _get_or_create_route(self, collector):
         """Find an active/upcoming route for the collector, or create one."""
-        # Try to find an existing active or upcoming route
         route = (
             Route.objects
             .filter(collector=collector, status__in=[Route.Status.ACTIVE, Route.Status.UPCOMING])
@@ -220,12 +291,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             .first()
         )
         if route:
-            # Update stops_count to reflect actual pickups
-            route.stops_count = PickupRequest.objects.filter(route=route).count()
-            route.save(update_fields=["stops_count"])
             return route
 
-        # Create a new route
         from django.utils import timezone
         collector_name = collector.get_full_name() or collector.username
         today = timezone.now().strftime("%b %d, %Y")

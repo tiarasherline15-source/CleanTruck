@@ -288,6 +288,17 @@ const Register = () => {
             </CardContent>
 
             <CardFooter className="flex flex-col gap-4">
+              <p className="text-xs text-center text-muted-foreground">
+                By creating an account, you agree to our{" "}
+                <Link to="/terms" className="text-[#1D9E75] font-medium hover:underline">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy-policy" className="text-[#1D9E75] font-medium hover:underline">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
               <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">

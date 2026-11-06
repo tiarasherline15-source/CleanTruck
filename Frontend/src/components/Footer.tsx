@@ -21,7 +21,29 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-           
+            <h3 className="font-semibold mb-4">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-primary-foreground/70">
+              <li>
+                <Link to="/" className="hover:text-primary-foreground transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-primary-foreground transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy-policy" className="hover:text-primary-foreground transition-colors">
+                  Privacy & Cookie Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-primary-foreground transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+            </ul>
           </div>
 
           {/* Services */}

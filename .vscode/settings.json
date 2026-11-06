@@ -1,4 +1,6 @@
 {
+  "python.defaultInterpreterPath": "${workspaceFolder}/Backend/CleanTruck_backend/venv/bin/python",
+  "python.terminal.activateEnvironment": true,
   "python.terminal.useEnvFile": true,
   "tailwindCSS.includeLanguages": {
     "css": "tailwindcss"

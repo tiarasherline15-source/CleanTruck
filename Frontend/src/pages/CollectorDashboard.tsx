@@ -100,7 +100,7 @@ const CollectorDashboard = () => {
   const activeRoute = routes.find(r => r.status === "active");
   const isRouteActive = !!activeRoute;
 
-  const totalDistance = routes.reduce((sum, r) => sum + (r.distance_km || 0), 0);
+  const totalDistance = routes.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
 
   const stats = [
     { label: "Today's Pickups", value: pickups.length.toString(), icon: Package, color: "text-primary" },
@@ -201,10 +201,21 @@ const CollectorDashboard = () => {
   };
 
   // Geolocation tracking
+  const lastSyncedRef = useRef<number>(0);
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) return;
     const id = navigator.geolocation.watchPosition(
-      (pos) => setCurrentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentLocation(coords);
+        const now = Date.now();
+        if (now - lastSyncedRef.current >= 30_000) {
+          lastSyncedRef.current = now;
+          import("@/lib/api").then(({ api }) => {
+            api.patch("/users/me/", { location: coords }).catch(() => {});
+          });
+        }
+      },
       () => {},
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
     );
