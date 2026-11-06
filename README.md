@@ -1,4 +1,4 @@
-# CleanTruck — Smart Waste Management Platform
+# CleanTruck  Smart Waste Management Platform
 
 CleanTruck is a full-stack waste management platform designed to streamline residential and commercial waste collection across Nairobi zones. It connects **Residents**, **Waste Collectors**, and **Platform Administrators** with role-based dashboards, interactive Leaflet/OpenStreetMap route navigation, automated notifications (in-app, email, and SMS), and operational analytics.
 
